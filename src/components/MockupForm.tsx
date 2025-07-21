@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Industry, MockupType, MockupFormData } from '@/types';
 import ImageUpload from './ImageUpload';
+import IndustrySelector from './IndustrySelector';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 
 interface MockupFormProps {
@@ -11,19 +12,6 @@ interface MockupFormProps {
   onChange?: (data: MockupFormData) => void;
   onImageUpload?: (file: File) => void;
 }
-
-const INDUSTRIES: { value: Industry; label: string }[] = [
-  { value: 'technology', label: 'Technology' },
-  { value: 'healthcare', label: 'Healthcare' },
-  { value: 'finance', label: 'Finance' },
-  { value: 'education', label: 'Education' },
-  { value: 'retail', label: 'Retail' },
-  { value: 'food-beverage', label: 'Food & Beverage' },
-  { value: 'fashion', label: 'Fashion' },
-  { value: 'sports', label: 'Sports' },
-  { value: 'entertainment', label: 'Entertainment' },
-  { value: 'other', label: 'Other' }
-];
 
 const MOCKUP_TYPES: { value: MockupType; label: string }[] = [
   { value: 'tshirt-front', label: 'T-Shirt (Front)' },
@@ -105,6 +93,22 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
     setUploadError('');
   };
 
+  const handleIndustryChange = (industry: Industry) => {
+    setFormData(prev => ({ ...prev, industry }));
+  };
+
+  const handleColorChange = (primary: string, secondary: string) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      primaryColor: primary,
+      secondaryColor: secondary
+    }));
+  };
+
+  const handleMockupTypeChange = (types: MockupType[]) => {
+    setFormData(prev => ({ ...prev, mockupTypes: types }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -174,34 +178,25 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Industry *
+            Tagline (Optional)
           </label>
-          <select
-            value={formData.industry}
-            onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value as Industry }))}
+          <input
+            type="text"
+            value={formData.tagline}
+            onChange={(e) => setFormData(prev => ({ ...prev, tagline: e.target.value }))}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {INDUSTRIES.map(industry => (
-              <option key={industry.value} value={industry.value}>
-                {industry.label}
-              </option>
-            ))}
-          </select>
+            placeholder="Your company tagline..."
+          />
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Tagline (Optional)
-        </label>
-        <input
-          type="text"
-          value={formData.tagline}
-          onChange={(e) => setFormData(prev => ({ ...prev, tagline: e.target.value }))}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Your company tagline..."
-        />
-      </div>
+      {/* Industry Selection */}
+      <IndustrySelector
+        selectedIndustry={formData.industry}
+        onIndustryChange={handleIndustryChange}
+        onColorChange={handleColorChange}
+        onMockupTypeChange={handleMockupTypeChange}
+      />
 
       {/* Color Selection */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

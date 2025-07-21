@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     // Generate all requested mockups
     const results = await generator.generateAllMockups({
       logoPath,
+      industry: body.industry,
       mockupTypes: body.mockupTypes,
       primaryColor: body.primaryColor,
       secondaryColor: body.secondaryColor,

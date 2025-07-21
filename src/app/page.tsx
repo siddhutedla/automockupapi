@@ -1,12 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MockupFormData, MockupResponse } from '@/types';
 import MockupForm from '@/components/MockupForm';
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [mockupResult, setMockupResult] = useState<MockupResponse | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleFormSubmit = async (formData: MockupFormData) => {
     setIsLoading(true);
@@ -83,7 +88,19 @@ export default function Home() {
             <h2 className="text-2xl font-semibold text-gray-900 mb-6">
               Create Your Mockups
             </h2>
-            <MockupForm onSubmit={handleFormSubmit} isLoading={isLoading} />
+            {isMounted ? (
+              <MockupForm onSubmit={handleFormSubmit} isLoading={isLoading} />
+            ) : (
+              <div className="space-y-6">
+                <div className="h-48 bg-gray-100 rounded-lg animate-pulse"></div>
+                <div className="space-y-4">
+                  <div className="h-10 bg-gray-100 rounded animate-pulse"></div>
+                  <div className="h-10 bg-gray-100 rounded animate-pulse"></div>
+                </div>
+                <div className="h-10 bg-gray-100 rounded animate-pulse"></div>
+                <div className="h-10 bg-gray-100 rounded animate-pulse"></div>
+              </div>
+            )}
           </div>
 
           {/* Results Section */}

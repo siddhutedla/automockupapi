@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Industry, MockupType, MockupFormData } from '@/types';
 import ImageUpload from './ImageUpload';
 
@@ -43,6 +43,11 @@ export default function MockupForm({ onSubmit, isLoading = false }: MockupFormPr
   });
 
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>('');
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleImageUpload = async (file: File) => {
     const formData = new FormData();
@@ -81,6 +86,21 @@ export default function MockupForm({ onSubmit, isLoading = false }: MockupFormPr
     }
     onSubmit(formData);
   };
+
+  // Prevent hydration issues by not rendering until mounted
+  if (!isMounted) {
+    return (
+      <div className="space-y-6">
+        <div className="h-48 bg-gray-100 rounded-lg animate-pulse"></div>
+        <div className="space-y-4">
+          <div className="h-10 bg-gray-100 rounded animate-pulse"></div>
+          <div className="h-10 bg-gray-100 rounded animate-pulse"></div>
+        </div>
+        <div className="h-10 bg-gray-100 rounded animate-pulse"></div>
+        <div className="h-10 bg-gray-100 rounded animate-pulse"></div>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">

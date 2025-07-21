@@ -9,12 +9,14 @@ interface MockupResultsProps {
 
 export default function MockupResults({ results }: MockupResultsProps) {
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'UTC' // Use UTC to prevent timezone differences
     });
   };
 

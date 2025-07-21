@@ -23,6 +23,7 @@ export default function MockupHistory({ onSelectMockup }: MockupHistoryProps) {
   const [error, setError] = useState<string>('');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [filters, setFilters] = useState({
     industry: '',
     mockupType: ''
@@ -66,6 +67,7 @@ export default function MockupHistory({ onSelectMockup }: MockupHistoryProps) {
   };
 
   useEffect(() => {
+    setMounted(true);
     fetchHistory(1, true);
   }, [filters]);
 
@@ -100,18 +102,38 @@ export default function MockupHistory({ onSelectMockup }: MockupHistoryProps) {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'UTC' // Use UTC to prevent timezone differences
     });
   };
 
   const getMockupTypeLabel = (type: MockupType) => {
     return type.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
+
+  // Don't render until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center space-x-2 mb-3">
+            <Filter className="h-4 w-4 text-gray-600" />
+            <h3 className="text-sm font-medium text-gray-700">Filters</h3>
+          </div>
+        </div>
+        <div className="text-center py-8">
+          <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <p className="text-sm text-gray-500 mt-2">Loading history...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (

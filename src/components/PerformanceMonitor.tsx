@@ -23,6 +23,7 @@ export default function PerformanceMonitor() {
   const [stats, setStats] = useState<PerformanceStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
+  const [mounted, setMounted] = useState(false);
 
   const fetchStats = async () => {
     setLoading(true);
@@ -62,6 +63,7 @@ export default function PerformanceMonitor() {
   };
 
   useEffect(() => {
+    setMounted(true);
     fetchStats();
     const interval = setInterval(fetchStats, 30000); // Refresh every 30 seconds
     return () => clearInterval(interval);
@@ -80,6 +82,24 @@ export default function PerformanceMonitor() {
     const minutes = Math.floor((seconds % 3600) / 60);
     return `${hours}h ${minutes}m`;
   };
+
+  // Don't render anything until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900 flex items-center">
+            <Activity className="h-5 w-5 mr-2 text-blue-600" />
+            Performance Monitor
+          </h3>
+        </div>
+        <div className="text-center py-4">
+          <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <p className="text-sm text-gray-500 mt-2">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (

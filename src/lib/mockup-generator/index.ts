@@ -2,6 +2,7 @@ import sharp from 'sharp';
 import { join } from 'path';
 import { MockupType, Industry } from '@/types';
 import { getIndustryConfig, IndustryConfig } from '@/lib/industry-configs';
+import { cacheManager } from '@/lib/cache-manager';
 
 export interface MockupGenerationOptions {
   logoPath: string;
@@ -21,16 +22,45 @@ export interface MockupResult {
 
 export class MockupGenerator {
   private templatesDir: string;
+  private shirtTemplates: Record<string, string>;
 
   constructor() {
     this.templatesDir = join(process.cwd(), 'public', 'templates');
+    this.shirtTemplates = {
+      'tshirt-front': join(process.cwd(), 'public', 'whiteshirtfront.jpg'),
+      'tshirt-back': join(process.cwd(), 'public', 'whitetshirtback.jpg'),
+      'hoodie-front': join(process.cwd(), 'public', 'whiteshirtfront.jpg'), // Using t-shirt for now
+      'hoodie-back': join(process.cwd(), 'public', 'whitetshirtback.jpg'),
+      'sweatshirt-front': join(process.cwd(), 'public', 'whiteshirtfront.jpg'),
+      'sweatshirt-back': join(process.cwd(), 'public', 'whitetshirtback.jpg'),
+      'polo-front': join(process.cwd(), 'public', 'whiteshirtfront.jpg'),
+      'polo-back': join(process.cwd(), 'public', 'whitetshirtback.jpg'),
+      'tank-top-front': join(process.cwd(), 'public', 'whiteshirtfront.jpg'),
+      'tank-top-back': join(process.cwd(), 'public', 'whitetshirtback.jpg')
+    };
   }
 
   async generateMockup(options: MockupGenerationOptions): Promise<MockupResult> {
     try {
       const { logoPath, mockupType, industry, primaryColor, secondaryColor, companyName, tagline } = options;
 
-      const mockup = await this.createEnhancedMockup({
+      // Check cache first
+      const cacheKey = cacheManager.generateMockupKey({
+        logoPath,
+        mockupType,
+        industry,
+        primaryColor: primaryColor || '#3B82F6',
+        secondaryColor: secondaryColor || '#1E40AF',
+        companyName: companyName || '',
+        tagline: tagline || ''
+      });
+
+      const cachedResult = cacheManager.get<MockupResult>(cacheKey);
+      if (cachedResult) {
+        return cachedResult;
+      }
+
+      const mockup = await this.createRealisticMockup({
         logoPath,
         mockupType,
         industry,
@@ -40,10 +70,15 @@ export class MockupGenerator {
         tagline
       });
 
-      return {
+      const result = {
         success: true,
         outputPath: mockup
       };
+
+      // Cache the result
+      cacheManager.set(cacheKey, result, 10 * 60 * 1000); // 10 minutes TTL
+
+      return result;
     } catch (error) {
       console.error('Mockup generation error:', error);
       return {
@@ -53,37 +88,47 @@ export class MockupGenerator {
     }
   }
 
-  private async createEnhancedMockup(options: MockupGenerationOptions): Promise<string> {
+  private async createRealisticMockup(options: MockupGenerationOptions): Promise<string> {
     const { logoPath, mockupType, industry, primaryColor = '#3B82F6', secondaryColor = '#1E40AF', companyName, tagline } = options;
 
     // Get industry-specific configuration
     const industryConfig = getIndustryConfig(industry);
 
-    // Parse colors
-    const primaryRGB = this.hexToRgb(primaryColor);
-    const secondaryRGB = this.hexToRgb(secondaryColor);
+    // Get the appropriate shirt template
+    const templatePath = this.shirtTemplates[mockupType];
+    if (!templatePath) {
+      throw new Error(`No template found for mockup type: ${mockupType}`);
+    }
 
-    // Create mockup background based on type and industry
-    const { width, height, background } = await this.createMockupBackground(mockupType, primaryRGB, industryConfig);
-
-    // Process the logo based on industry styling
-    const logoSize = this.getLogoSize(industryConfig.styling.logoSize);
-    const logo = await sharp(logoPath)
-      .resize(logoSize, logoSize, { fit: 'inside', withoutEnlargement: true })
+    // Load and process the shirt template
+    const shirtTemplate = await sharp(templatePath)
+      .resize(800, 1000, { fit: 'inside', withoutEnlargement: true })
       .png()
       .toBuffer();
 
-    // Create text overlays with industry-specific styling
-    const textOverlays = await this.createTextOverlays(companyName, tagline, secondaryRGB, industryConfig);
+    // Get template metadata
+    const templateMetadata = await sharp(templatePath).metadata();
+    const width = templateMetadata.width || 800;
+    const height = templateMetadata.height || 1000;
 
-    // Get positioning based on industry layout
-    const positioning = this.getPositioning(industryConfig.styling.layout, width, height, logoSize);
+    // Process the logo with realistic effects
+    const logoSize = this.getLogoSize(industryConfig.styling.logoSize);
+    const processedLogo = await this.processLogoForRealisticApplication(logoPath, logoSize, industryConfig);
 
-    // Composite everything together
-    const mockup = await sharp(background)
+    // Create text overlays with realistic styling
+    const textOverlays = await this.createRealisticTextOverlays(companyName, tagline, secondaryColor, industryConfig, width, height);
+
+    // Get realistic positioning based on shirt type and layout
+    const positioning = this.getRealisticPositioning(mockupType, industryConfig.styling.layout, width, height, logoSize);
+
+    // Apply color tinting to the shirt if needed
+    const tintedShirt = await this.applyShirtColorTinting(shirtTemplate, primaryColor);
+
+    // Composite everything together with realistic effects
+    const mockup = await sharp(tintedShirt)
       .composite([
         {
-          input: logo,
+          input: processedLogo,
           top: positioning.logoTop,
           left: positioning.logoLeft
         },
@@ -102,85 +147,89 @@ export class MockupGenerator {
     return `/uploads/${filename}`;
   }
 
-  private async createMockupBackground(mockupType: MockupType, primaryRGB: { r: number, g: number, b: number }, industryConfig: IndustryConfig) {
-    let width = 800;
-    let height = 1000;
+  private async processLogoForRealisticApplication(logoPath: string, logoSize: number, industryConfig: IndustryConfig) {
+    // Process logo with realistic fabric application effects
+    const logo = await sharp(logoPath)
+      .resize(logoSize, logoSize, { fit: 'inside', withoutEnlargement: true })
+      .png()
+      .toBuffer();
 
-    // Adjust dimensions based on mockup type
-    if (mockupType.includes('hoodie')) {
-      height = 1200;
-    } else if (mockupType.includes('sweatshirt')) {
-      height = 1100;
-    }
+    // Create a fabric-like texture overlay
+    const fabricTexture = await this.createFabricTexture(logoSize, logoSize);
+    
+    // Blend logo with fabric texture for realistic appearance
+    const realisticLogo = await sharp(logo)
+      .composite([
+        {
+          input: fabricTexture,
+          blend: 'overlay',
+          top: 0,
+          left: 0
+        }
+      ])
+      .png()
+      .toBuffer();
 
-    // Create gradient background for more realistic look
-    const background = await sharp({
-      create: {
-        width,
-        height,
-        channels: 4,
-        background: { r: primaryRGB.r, g: primaryRGB.g, b: primaryRGB.b, alpha: 1 }
-      }
-    })
-    .composite([
-      // Add a subtle gradient overlay
-      {
-        input: await this.createGradientOverlay(width, height, primaryRGB),
-        top: 0,
-        left: 0
-      }
-    ])
-    .png()
-    .toBuffer();
-
-    return { width, height, background };
+    return realisticLogo;
   }
 
-  private async createGradientOverlay(width: number, height: number, color: { r: number, g: number, b: number }) {
-    // Create a subtle gradient for depth
-    const gradient = await sharp({
+  private async createFabricTexture(width: number, height: number) {
+    // Create a subtle fabric texture pattern
+    const texture = await sharp({
       create: {
         width,
         height,
         channels: 4,
-        background: { r: 0, g: 0, b: 0, alpha: 0.1 }
+        background: { r: 255, g: 255, b: 255, alpha: 0.1 }
       }
     })
     .png()
     .toBuffer();
 
-    return gradient;
+    return texture;
   }
 
-  private async createTextOverlays(companyName: string | undefined, tagline: string | undefined, color: { r: number, g: number, b: number }, industryConfig: IndustryConfig) {
+  private async applyShirtColorTinting(shirtTemplate: Buffer, color: string) {
+    const rgb = this.hexToRgb(color);
+    
+    // Apply subtle color tinting to the shirt
+    const tinted = await sharp(shirtTemplate)
+      .tint({ r: rgb.r, g: rgb.g, b: rgb.b })
+      .modulate({ brightness: 1.1, saturation: 0.9 })
+      .png()
+      .toBuffer();
+
+    return tinted;
+  }
+
+  private async createRealisticTextOverlays(companyName: string | undefined, tagline: string | undefined, color: string, industryConfig: IndustryConfig, width: number, height: number) {
     const overlays = [];
+    const rgb = this.hexToRgb(color);
 
     if (companyName) {
       const fontSize = this.getTextSize(industryConfig.styling.textStyle);
-      const companyText = await this.createTextImage(companyName, fontSize, color, industryConfig.styling.textStyle);
+      const companyText = await this.createRealisticTextImage(companyName, fontSize, rgb, industryConfig.styling.textStyle);
       overlays.push({
         input: companyText,
-        top: 400,
-        left: 200
+        top: Math.floor(height * 0.4),
+        left: Math.floor((width - companyText.length * fontSize * 0.6) / 2)
       });
     }
 
     if (tagline) {
       const fontSize = this.getTextSize(industryConfig.styling.textStyle, true);
-      const taglineText = await this.createTextImage(tagline, fontSize, color, industryConfig.styling.textStyle);
+      const taglineText = await this.createRealisticTextImage(tagline, fontSize, rgb, industryConfig.styling.textStyle);
       overlays.push({
         input: taglineText,
-        top: 450,
-        left: 200
+        top: Math.floor(height * 0.45),
+        left: Math.floor((width - taglineText.length * fontSize * 0.6) / 2)
       });
     }
 
     return overlays;
   }
 
-  private async createTextImage(text: string, fontSize: number, color: { r: number, g: number, b: number }, textStyle: string) {
-    // Create a simple text image using Sharp
-    // In a production app, you'd use a proper text rendering library
+  private async createRealisticTextImage(text: string, fontSize: number, color: { r: number, g: number, b: number }, textStyle: string) {
     const textWidth = text.length * fontSize * 0.6;
     const textHeight = fontSize * 1.2;
 
@@ -212,42 +261,49 @@ export class MockupGenerator {
     return textImage;
   }
 
+  private getRealisticPositioning(mockupType: MockupType, layout: string, width: number, height: number, logoSize: number) {
+    // Position logo realistically on the shirt based on type and layout
+    let logoTop, logoLeft;
+
+    switch (layout) {
+      case 'corner':
+        logoTop = Math.floor(height * 0.15);
+        logoLeft = Math.floor(width * 0.1);
+        break;
+      case 'full-width':
+        logoTop = Math.floor(height * 0.25);
+        logoLeft = Math.floor((width - logoSize) / 2);
+        break;
+      default: // centered
+        logoTop = Math.floor(height * 0.25);
+        logoLeft = Math.floor((width - logoSize) / 2);
+        break;
+    }
+
+    // Adjust positioning based on shirt type
+    if (mockupType.includes('back')) {
+      logoTop = Math.floor(height * 0.2); // Slightly higher on back
+    }
+
+    return { logoTop, logoLeft };
+  }
+
   private getLogoSize(size: 'small' | 'medium' | 'large'): number {
     switch (size) {
-      case 'small': return 100;
-      case 'large': return 200;
-      default: return 150;
+      case 'small': return 80;
+      case 'large': return 150;
+      default: return 120;
     }
   }
 
   private getTextSize(textStyle: string, isTagline = false): number {
-    if (isTagline) return 16;
+    if (isTagline) return 14;
     
     switch (textStyle) {
-      case 'bold': return 28;
-      case 'elegant': return 24;
-      case 'casual': return 26;
-      default: return 24;
-    }
-  }
-
-  private getPositioning(layout: string, width: number, height: number, logoSize: number) {
-    switch (layout) {
-      case 'corner':
-        return {
-          logoTop: 50,
-          logoLeft: 50
-        };
-      case 'full-width':
-        return {
-          logoTop: 200,
-          logoLeft: (width - logoSize) / 2
-        };
-      default: // centered
-        return {
-          logoTop: 200,
-          logoLeft: (width - logoSize) / 2
-        };
+      case 'bold': return 24;
+      case 'elegant': return 20;
+      case 'casual': return 22;
+      default: return 20;
     }
   }
 

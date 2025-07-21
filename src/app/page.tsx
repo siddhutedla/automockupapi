@@ -3,53 +3,29 @@
 import { useState } from 'react';
 import { MockupFormData, MockupResponse } from '@/types';
 import MockupForm from '@/components/MockupForm';
-import MockupPreview from '@/components/MockupPreview';
+import MockupResults from '@/components/MockupResults';
+import MockupHistory from '@/components/MockupHistory';
+import { FileText, History } from 'lucide-react';
 
 export default function Home() {
+  const [results, setResults] = useState<MockupResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [mockupResult, setMockupResult] = useState<MockupResponse | null>(null);
-  const [formData, setFormData] = useState<MockupFormData>({
-    logo: null,
-    industry: 'technology',
-    companyName: '',
-    tagline: '',
-    primaryColor: '#3B82F6',
-    secondaryColor: '#1E40AF',
-    mockupTypes: ['tshirt-front']
-  });
-  const [uploadedImageUrl, setUploadedImageUrl] = useState<string>('');
+  const [error, setError] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'form' | 'history'>('form');
 
-  const handleFormSubmit = async (formData: MockupFormData) => {
+  const handleSubmit = async (formData: MockupFormData) => {
     setIsLoading(true);
-    setMockupResult(null);
+    setError('');
+    setResults(null);
 
     try {
-      // First upload the image if we have a file
-      let logoUrl = '';
-      if (formData.logo) {
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', formData.logo);
-
-        const uploadResponse = await fetch('/api/upload', {
-          method: 'POST',
-          body: uploadFormData
-        });
-
-        const uploadResult = await uploadResponse.json();
-        if (!uploadResult.success) {
-          throw new Error(uploadResult.error || 'Upload failed');
-        }
-        logoUrl = uploadResult.url;
-      }
-
-      // Generate mockups
-      const mockupResponse = await fetch('/api/mockup', {
+      const response = await fetch('/api/mockup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          logoUrl,
+          logoUrl: formData.logo ? `/uploads/${formData.logo.name}` : '',
           industry: formData.industry,
           companyName: formData.companyName,
           tagline: formData.tagline,
@@ -59,136 +35,122 @@ export default function Home() {
         }),
       });
 
-      const result = await mockupResponse.json();
-      
+      const result = await response.json();
+
       if (result.success) {
-        setMockupResult(result.data);
+        setResults(result.data);
+        setActiveTab('form'); // Stay on form tab to show results
       } else {
-        throw new Error(result.error || 'Mockup generation failed');
+        setError(result.error || 'Failed to generate mockups');
       }
     } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to generate mockups: ' + (error as Error).message);
+      console.error('Error generating mockups:', error);
+      setError('Failed to generate mockups. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleFormChange = (newFormData: MockupFormData) => {
-    setFormData(newFormData);
-  };
-
-  const handleImageUpload = (file: File) => {
-    // Handle image upload and update the URL
-    const formData = new FormData();
-    formData.append('file', file);
-
-    fetch('/api/upload', {
-      method: 'POST',
-      body: formData
-    })
-    .then(response => response.json())
-    .then(result => {
-      if (result.success) {
-        setUploadedImageUrl(result.url);
-      }
-    })
-    .catch(error => {
-      console.error('Upload error:', error);
-    });
+  const handleSelectMockup = (mockup: MockupResponse) => {
+    setResults(mockup);
+    setActiveTab('form');
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto py-8 px-4">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Auto Mockup Generator
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Upload your logo and create professional mockups for t-shirts, hoodies, and more. 
-            Perfect for branding, marketing, and promotional materials.
-          </p>
-        </div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              Create Your Mockups
+            </h1>
+            <p className="text-lg text-gray-600">
+              Generate professional apparel mockups with your logo and branding
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Form Section */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-                Create Your Mockups
-              </h2>
-              <MockupForm 
-                onSubmit={handleFormSubmit} 
-                isLoading={isLoading}
-                onChange={handleFormChange}
-                onImageUpload={handleImageUpload}
-              />
+          {/* Tab Navigation */}
+          <div className="flex justify-center mb-8">
+            <div className="flex bg-white rounded-lg shadow-sm border border-gray-200 p-1">
+              <button
+                onClick={() => setActiveTab('form')}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
+                  activeTab === 'form'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <FileText className="h-4 w-4" />
+                <span>Create Mockups</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
+                  activeTab === 'history'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <History className="h-4 w-4" />
+                <span>History</span>
+              </button>
             </div>
           </div>
 
-          {/* Preview Section */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <MockupPreview
-                logoUrl={uploadedImageUrl}
-                companyName={formData.companyName}
-                tagline={formData.tagline}
-                primaryColor={formData.primaryColor}
-                secondaryColor={formData.secondaryColor}
-                selectedMockupTypes={formData.mockupTypes}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Results Section */}
-        {mockupResult && (
-          <div className="mt-8 bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-              Generated Mockups
-            </h2>
-            <div className="space-y-4">
-              <div className="text-sm text-gray-600">
-                Generated on: {new Date(mockupResult.createdAt).toLocaleString()}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {mockupResult.mockups.map((mockup, index) => (
-                  <div key={index} className="border rounded-lg p-4">
-                    <h3 className="font-medium text-gray-900 mb-2">
-                      {mockup.type.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </h3>
-                    <img
-                      src={mockup.url}
-                      alt={`Mockup ${mockup.type}`}
-                      className="w-full h-auto rounded"
-                    />
-                    <div className="mt-3 flex space-x-2">
-                      <button
-                        onClick={() => window.open(mockup.url, '_blank')}
-                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                      >
-                        View Full Size
-                      </button>
-                      <button
-                        onClick={() => {
-                          const link = document.createElement('a');
-                          link.href = mockup.url;
-                          link.download = `mockup-${mockup.type}.png`;
-                          link.click();
-                        }}
-                        className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
-                      >
-                        Download
-                      </button>
+          {/* Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left Column - Form or History */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              {activeTab === 'form' ? (
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                    Generate New Mockups
+                  </h2>
+                  <MockupForm
+                    onSubmit={handleSubmit}
+                    isLoading={isLoading}
+                  />
+                  {error && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                      <p className="text-red-700 text-sm">{error}</p>
                     </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                    Mockup History
+                  </h2>
+                  <MockupHistory onSelectMockup={handleSelectMockup} />
+                </div>
+              )}
+            </div>
+
+            {/* Right Column - Results */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                {results ? 'Generated Mockups' : 'Preview'}
+              </h2>
+              {results ? (
+                <MockupResults results={results} />
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                    <FileText className="h-8 w-8 text-gray-400" />
                   </div>
-                ))}
-              </div>
+                  <p className="text-lg font-medium mb-2">No mockups yet</p>
+                  <p className="text-sm">
+                    {activeTab === 'form' 
+                      ? 'Fill out the form and generate your first mockup'
+                      : 'Select a mockup from history to view it here'
+                    }
+                  </p>
+                </div>
+              )}
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

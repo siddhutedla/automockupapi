@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Industry, MockupType, MockupFormData } from '@/types';
 import ImageUpload from './ImageUpload';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 
 interface MockupFormProps {
   onSubmit: (data: MockupFormData) => void;
@@ -44,12 +45,17 @@ export default function MockupForm({ onSubmit, isLoading = false }: MockupFormPr
 
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>('');
   const [isMounted, setIsMounted] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const [uploadError, setUploadError] = useState<string>('');
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   const handleImageUpload = async (file: File) => {
+    setUploadStatus('uploading');
+    setUploadError('');
+
     const formData = new FormData();
     formData.append('file', file);
 
@@ -64,26 +70,47 @@ export default function MockupForm({ onSubmit, isLoading = false }: MockupFormPr
       if (result.success && result.url) {
         setUploadedImageUrl(result.url);
         setFormData(prev => ({ ...prev, logo: file }));
+        setUploadStatus('success');
+        
+        // Clear success status after 3 seconds
+        setTimeout(() => setUploadStatus('idle'), 3000);
       } else {
-        alert('Upload failed: ' + result.error);
+        throw new Error(result.error || 'Upload failed');
       }
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Upload failed');
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      setUploadError(errorMessage);
+      setUploadStatus('error');
     }
   };
 
   const handleImageRemove = () => {
     setUploadedImageUrl('');
     setFormData(prev => ({ ...prev, logo: null }));
+    setUploadStatus('idle');
+    setUploadError('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!formData.logo) {
-      alert('Please upload a logo');
+      setUploadError('Please upload a logo');
       return;
     }
+
+    if (!formData.companyName.trim()) {
+      setUploadError('Please enter a company name');
+      return;
+    }
+
+    if (formData.mockupTypes.length === 0) {
+      setUploadError('Please select at least one mockup type');
+      return;
+    }
+
+    setUploadError('');
     onSubmit(formData);
   };
 
@@ -104,6 +131,21 @@ export default function MockupForm({ onSubmit, isLoading = false }: MockupFormPr
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Upload Status */}
+      {uploadStatus === 'success' && (
+        <div className="p-3 bg-green-50 border border-green-200 rounded-md flex items-center space-x-2">
+          <CheckCircle className="h-5 w-5 text-green-500" />
+          <p className="text-sm text-green-700">Logo uploaded successfully!</p>
+        </div>
+      )}
+
+      {uploadError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-md flex items-center space-x-2">
+          <AlertCircle className="h-5 w-5 text-red-500" />
+          <p className="text-sm text-red-700">{uploadError}</p>
+        </div>
+      )}
+
       {/* Logo Upload */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -128,6 +170,7 @@ export default function MockupForm({ onSubmit, isLoading = false }: MockupFormPr
             onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
+            placeholder="Enter your company name"
           />
         </div>
 
@@ -224,10 +267,10 @@ export default function MockupForm({ onSubmit, isLoading = false }: MockupFormPr
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={isLoading || !formData.logo}
+        disabled={isLoading || !formData.logo || uploadStatus === 'uploading'}
         className={`
           w-full py-3 px-4 rounded-md font-medium transition-colors
-          ${isLoading || !formData.logo
+          ${isLoading || !formData.logo || uploadStatus === 'uploading'
             ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
             : 'bg-blue-600 text-white hover:bg-blue-700'
           }

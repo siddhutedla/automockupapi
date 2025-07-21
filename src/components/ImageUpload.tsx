@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, AlertCircle } from 'lucide-react';
 
 interface ImageUploadProps {
   onImageUpload: (file: File) => void;
@@ -19,6 +19,7 @@ export default function ImageUpload({
 }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     setIsMounted(true);
@@ -29,11 +30,23 @@ export default function ImageUpload({
 
     const file = acceptedFiles[0];
     setIsUploading(true);
+    setError('');
 
     try {
+      // Validate file size
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('File size must be less than 5MB');
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Please select a valid image file');
+      }
+
       onImageUpload(file);
     } catch (error) {
       console.error('Upload error:', error);
+      setError(error instanceof Error ? error.message : 'Upload failed');
     } finally {
       setIsUploading(false);
     }
@@ -45,7 +58,11 @@ export default function ImageUpload({
       'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp']
     },
     multiple: false,
-    maxSize: 5 * 1024 * 1024 // 5MB
+    maxSize: 5 * 1024 * 1024, // 5MB
+    onDropRejected: (rejectedFiles) => {
+      const error = rejectedFiles[0]?.errors[0]?.message || 'File rejected';
+      setError(error);
+    }
   });
 
   // Prevent hydration issues by not rendering until mounted
@@ -62,6 +79,13 @@ export default function ImageUpload({
 
   return (
     <div className={`w-full ${className}`}>
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-center space-x-2">
+          <AlertCircle className="h-5 w-5 text-red-500" />
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
       {currentImage ? (
         <div className="relative">
           <img

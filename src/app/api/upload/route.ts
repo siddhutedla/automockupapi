@@ -23,6 +23,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate file size (5MB limit)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      return NextResponse.json(
+        { success: false, error: 'File size must be less than 5MB' },
+        { status: 400 }
+      );
+    }
+
     // Create uploads directory if it doesn't exist
     const uploadsDir = join(process.cwd(), 'public', 'uploads');
     await mkdir(uploadsDir, { recursive: true });
@@ -37,6 +46,32 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
+    // Validate image and get metadata
+    let imageMetadata;
+    try {
+      imageMetadata = await sharp(buffer).metadata();
+    } catch (error) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid image file' },
+        { status: 400 }
+      );
+    }
+
+    // Check minimum dimensions
+    if (imageMetadata.width && imageMetadata.width < 100) {
+      return NextResponse.json(
+        { success: false, error: 'Image width must be at least 100px' },
+        { status: 400 }
+      );
+    }
+
+    if (imageMetadata.height && imageMetadata.height < 100) {
+      return NextResponse.json(
+        { success: false, error: 'Image height must be at least 100px' },
+        { status: 400 }
+      );
+    }
+
     // Process image with sharp (resize and optimize)
     const processedImage = await sharp(buffer)
       .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
@@ -50,7 +85,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      url
+      url,
+      metadata: {
+        originalSize: file.size,
+        processedSize: processedImage.length,
+        dimensions: {
+          width: imageMetadata.width,
+          height: imageMetadata.height
+        }
+      }
     });
 
   } catch (error) {

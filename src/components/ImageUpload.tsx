@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, X, Image as ImageIcon, AlertCircle } from 'lucide-react';
 
@@ -18,12 +18,7 @@ export default function ImageUpload({
   className = '' 
 }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const [error, setError] = useState<string>('');
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
@@ -64,18 +59,6 @@ export default function ImageUpload({
       setError(error);
     }
   });
-
-  // Prevent hydration issues by not rendering until mounted
-  if (!isMounted) {
-    return (
-      <div className={`w-full h-48 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 flex items-center justify-center ${className}`}>
-        <div className="flex flex-col items-center space-y-2">
-          <ImageIcon className="h-8 w-8 text-gray-400" />
-          <p className="text-sm text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={`w-full ${className}`}>

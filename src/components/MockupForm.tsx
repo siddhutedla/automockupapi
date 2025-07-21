@@ -8,6 +8,8 @@ import { AlertCircle, CheckCircle } from 'lucide-react';
 interface MockupFormProps {
   onSubmit: (data: MockupFormData) => void;
   isLoading?: boolean;
+  onChange?: (data: MockupFormData) => void;
+  onImageUpload?: (file: File) => void;
 }
 
 const INDUSTRIES: { value: Industry; label: string }[] = [
@@ -29,10 +31,14 @@ const MOCKUP_TYPES: { value: MockupType; label: string }[] = [
   { value: 'hoodie-front', label: 'Hoodie (Front)' },
   { value: 'hoodie-back', label: 'Hoodie (Back)' },
   { value: 'sweatshirt-front', label: 'Sweatshirt (Front)' },
-  { value: 'sweatshirt-back', label: 'Sweatshirt (Back)' }
+  { value: 'sweatshirt-back', label: 'Sweatshirt (Back)' },
+  { value: 'polo-front', label: 'Polo (Front)' },
+  { value: 'polo-back', label: 'Polo (Back)' },
+  { value: 'tank-top-front', label: 'Tank Top (Front)' },
+  { value: 'tank-top-back', label: 'Tank Top (Back)' }
 ];
 
-export default function MockupForm({ onSubmit, isLoading = false }: MockupFormProps) {
+export default function MockupForm({ onSubmit, isLoading = false, onChange, onImageUpload }: MockupFormProps) {
   const [formData, setFormData] = useState<MockupFormData>({
     logo: null,
     industry: 'technology',
@@ -44,13 +50,15 @@ export default function MockupForm({ onSubmit, isLoading = false }: MockupFormPr
   });
 
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>('');
-  const [isMounted, setIsMounted] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [uploadError, setUploadError] = useState<string>('');
 
+  // Call onChange when form data changes
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
+    if (onChange) {
+      onChange(formData);
+    }
+  }, [formData, onChange]);
 
   const handleImageUpload = async (file: File) => {
     setUploadStatus('uploading');
@@ -71,6 +79,11 @@ export default function MockupForm({ onSubmit, isLoading = false }: MockupFormPr
         setUploadedImageUrl(result.url);
         setFormData(prev => ({ ...prev, logo: file }));
         setUploadStatus('success');
+        
+        // Call onImageUpload if provided
+        if (onImageUpload) {
+          onImageUpload(file);
+        }
         
         // Clear success status after 3 seconds
         setTimeout(() => setUploadStatus('idle'), 3000);
@@ -113,21 +126,6 @@ export default function MockupForm({ onSubmit, isLoading = false }: MockupFormPr
     setUploadError('');
     onSubmit(formData);
   };
-
-  // Prevent hydration issues by not rendering until mounted
-  if (!isMounted) {
-    return (
-      <div className="space-y-6">
-        <div className="h-48 bg-gray-100 rounded-lg animate-pulse"></div>
-        <div className="space-y-4">
-          <div className="h-10 bg-gray-100 rounded animate-pulse"></div>
-          <div className="h-10 bg-gray-100 rounded animate-pulse"></div>
-        </div>
-        <div className="h-10 bg-gray-100 rounded animate-pulse"></div>
-        <div className="h-10 bg-gray-100 rounded animate-pulse"></div>
-      </div>
-    );
-  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -237,9 +235,9 @@ export default function MockupForm({ onSubmit, isLoading = false }: MockupFormPr
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Select Mockup Types *
         </label>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {MOCKUP_TYPES.map(type => (
-            <label key={type.value} className="flex items-center space-x-2 cursor-pointer">
+            <label key={type.value} className="flex items-center space-x-2 cursor-pointer p-2 rounded border border-gray-200 hover:bg-gray-50">
               <input
                 type="checkbox"
                 checked={formData.mockupTypes.includes(type.value)}
@@ -262,6 +260,9 @@ export default function MockupForm({ onSubmit, isLoading = false }: MockupFormPr
             </label>
           ))}
         </div>
+        <p className="text-xs text-gray-500 mt-2">
+          Select one or more mockup types to generate
+        </p>
       </div>
 
       {/* Submit Button */}

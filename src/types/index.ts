@@ -16,7 +16,11 @@ export type MockupType =
   | 'hoodie-front'
   | 'hoodie-back'
   | 'sweatshirt-front'
-  | 'sweatshirt-back';
+  | 'sweatshirt-back'
+  | 'polo-front'
+  | 'polo-back'
+  | 'tank-top-front'
+  | 'tank-top-back';
 
 export interface MockupFormData {
   logo: File | null;

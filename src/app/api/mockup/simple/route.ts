@@ -138,7 +138,7 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
         {
           input: frontLogo,
           top: Math.round(height * 0.25), // Better chest position
-          left: width - 140  // Right side margin
+          left: width - 170  // Right side margin
         }
       ])
       .png()

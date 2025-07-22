@@ -110,15 +110,15 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
     
     console.log('✅ [SIMPLE-MOCKUP] Logo processed, size:', processedLogo.length, 'bytes');
     
-    // Generate front mockup
+    // Generate front mockup - logo on left chest
     console.log('🎨 [SIMPLE-MOCKUP] Generating front mockup...');
     const frontMockup = await sharp(frontTemplate)
       .resize(800, 1000, { fit: 'inside', withoutEnlargement: true })
       .composite([
         {
           input: processedLogo,
-          top: 300, // Center vertically
-          left: 300  // Center horizontally
+          top: 250, // Left chest position
+          left: 50   // Left side
         }
       ])
       .png()
@@ -126,15 +126,48 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
     
     console.log('✅ [SIMPLE-MOCKUP] Front mockup generated, size:', frontMockup.length, 'bytes');
     
-    // Generate back mockup
+    // Generate back mockup - logo in middle, slightly bigger
     console.log('🎨 [SIMPLE-MOCKUP] Generating back mockup...');
+    const backLogo = await sharp(logoBuffer)
+      .resize(260, 260, { fit: 'inside', withoutEnlargement: true }) // 30% bigger
+      .png()
+      .toBuffer();
+    
+    // Create company name text for back mockup
+    const companyText = await sharp({
+      create: {
+        width: 600,
+        height: 50,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
+      }
+    })
+    .composite([
+      {
+        input: Buffer.from(`
+          <svg width="600" height="50">
+            <text x="0" y="35" font-family="Arial, sans-serif" font-size="24" fill="black" font-weight="bold">${companyName}</text>
+          </svg>
+        `),
+        top: 0,
+        left: 0
+      }
+    ])
+    .png()
+    .toBuffer();
+    
     const backMockup = await sharp(backTemplate)
       .resize(800, 1000, { fit: 'inside', withoutEnlargement: true })
       .composite([
         {
-          input: processedLogo,
-          top: 300, // Center vertically
-          left: 300  // Center horizontally
+          input: backLogo,
+          top: 250, // Center vertically
+          left: 270  // Center horizontally (800 - 260) / 2
+        },
+        {
+          input: companyText,
+          top: 520, // Below the logo
+          left: 100  // Center horizontally
         }
       ])
       .png()

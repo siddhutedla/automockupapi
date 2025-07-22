@@ -117,7 +117,7 @@ export class MockupGenerator {
     const processedLogo = await this.processLogoForRealisticApplication(logoPath, positioning.logoSize);
 
     // Create text overlays with realistic styling
-    const textOverlays = await this.createRealisticTextOverlays(companyName, tagline, industryConfig, width, height);
+    const textOverlays = await this.createRealisticTextOverlays(companyName, tagline, industryConfig, width, height, mockupType);
 
     // Composite everything together - keep shirt white, just add logo
     const mockup = await sharp(shirtTemplate)
@@ -197,28 +197,55 @@ export class MockupGenerator {
     return tinted;
   }
 
-  private async createRealisticTextOverlays(companyName: string | undefined, tagline: string | undefined, industryConfig: IndustryConfig, width: number, height: number) {
+  private async createRealisticTextOverlays(companyName: string | undefined, tagline: string | undefined, industryConfig: IndustryConfig, width: number, height: number, mockupType?: MockupType) {
     const overlays = [];
     const rgb = this.hexToRgb(industryConfig.primaryColors[0]);
 
     if (companyName) {
       const fontSize = this.getTextSize(industryConfig.styling.textStyle);
       const companyText = await this.createRealisticTextImage(companyName, fontSize, rgb, industryConfig.styling.textStyle);
-      overlays.push({
-        input: companyText,
-        top: Math.floor(height * 0.4),
-        left: Math.floor((width - companyText.length * fontSize * 0.6) / 2)
-      });
+      
+      // Check if this is a back mockup for special positioning
+      const isBack = mockupType?.includes('-back');
+      
+      if (isBack) {
+        // For back mockups, position company name underneath the logo
+        overlays.push({
+          input: companyText,
+          top: Math.floor(height * 0.45), // Position below the logo
+          left: Math.floor((width - companyText.length * fontSize * 0.6) / 2)
+        });
+      } else {
+        // For front mockups, position company name in the center
+        overlays.push({
+          input: companyText,
+          top: Math.floor(height * 0.4),
+          left: Math.floor((width - companyText.length * fontSize * 0.6) / 2)
+        });
+      }
     }
 
     if (tagline) {
       const fontSize = this.getTextSize(industryConfig.styling.textStyle, true);
       const taglineText = await this.createRealisticTextImage(tagline, fontSize, rgb, industryConfig.styling.textStyle);
-      overlays.push({
-        input: taglineText,
-        top: Math.floor(height * 0.45),
-        left: Math.floor((width - taglineText.length * fontSize * 0.6) / 2)
-      });
+      
+      const isBack = mockupType?.includes('-back');
+      
+      if (isBack) {
+        // For back mockups, position tagline below company name
+        overlays.push({
+          input: taglineText,
+          top: Math.floor(height * 0.5),
+          left: Math.floor((width - taglineText.length * fontSize * 0.6) / 2)
+        });
+      } else {
+        // For front mockups, position tagline below company name
+        overlays.push({
+          input: taglineText,
+          top: Math.floor(height * 0.45),
+          left: Math.floor((width - taglineText.length * fontSize * 0.6) / 2)
+        });
+      }
     }
 
     return overlays;
@@ -268,6 +295,10 @@ export class MockupGenerator {
     let logoTop = height * 0.3;
     let logoLeft = (width - adjustedLogoSize) / 2;
     
+    // Check if this is a front or back mockup
+    const isFront = mockupType.includes('-front');
+    const isBack = mockupType.includes('-back');
+    
     // Apply preset positioning if specified
     if (logoPosition) {
       switch (logoPosition) {
@@ -303,22 +334,35 @@ export class MockupGenerator {
           break;
       }
     } else {
-      // Use layout-based positioning as fallback
-      switch (layout) {
-        case 'centered':
-          logoTop = height * 0.3;
-          logoLeft = (width - adjustedLogoSize) / 2;
-          break;
-        case 'corner':
-          logoTop = height * 0.25;
-          logoLeft = margin;
-          adjustedLogoSize = Math.min(adjustedLogoSize, width * 0.25);
-          break;
-        case 'full-width':
-          logoTop = height * 0.2;
-          logoLeft = margin;
-          adjustedLogoSize = width - (margin * 2);
-          break;
+      // Use improved positioning based on front/back
+      if (isFront) {
+        // Front: logo on left chest
+        logoTop = height * 0.25;
+        logoLeft = margin;
+        adjustedLogoSize = Math.min(adjustedLogoSize, width * 0.25);
+      } else if (isBack) {
+        // Back: logo in middle, slightly bigger
+        logoTop = height * 0.25;
+        logoLeft = (width - adjustedLogoSize) / 2;
+        adjustedLogoSize = Math.min(adjustedLogoSize * 1.3, maxLogoWidth, maxLogoHeight); // 30% bigger
+      } else {
+        // Fallback to layout-based positioning
+        switch (layout) {
+          case 'centered':
+            logoTop = height * 0.3;
+            logoLeft = (width - adjustedLogoSize) / 2;
+            break;
+          case 'corner':
+            logoTop = height * 0.25;
+            logoLeft = margin;
+            adjustedLogoSize = Math.min(adjustedLogoSize, width * 0.25);
+            break;
+          case 'full-width':
+            logoTop = height * 0.2;
+            logoLeft = margin;
+            adjustedLogoSize = width - (margin * 2);
+            break;
+        }
       }
     }
     

@@ -48,8 +48,8 @@ export default function TestLeadPage() {
       <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
         <div className="text-center mb-6">
           <TestTube className="h-12 w-12 text-blue-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900">Test Lead ID Functionality</h1>
-          <p className="text-gray-600 mt-2">Testing lead ID: 6764494000001367215</p>
+          <h1 className="text-2xl font-bold text-black">Test Lead ID Functionality</h1>
+          <p className="text-black mt-2">Testing lead ID: 6764494000001367215</p>
         </div>
 
         <div className="space-y-4">
@@ -86,7 +86,7 @@ export default function TestLeadPage() {
               </div>
               
               <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Test Results:</h3>
+                <h3 className="text-sm font-medium text-black mb-2">Test Results:</h3>
                 <div className="space-y-2 text-sm">
                   <div><strong>Lead ID:</strong> {result.leadId}</div>
                   <div><strong>Lead Found:</strong> {result.leadFound ? 'Yes' : 'No'}</div>
@@ -95,7 +95,7 @@ export default function TestLeadPage() {
 
               {result.photoTest && (
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-900 mb-2">Photo Test:</h3>
+                  <h3 className="text-sm font-medium text-black mb-2">Photo Test:</h3>
                   <div className="space-y-2 text-sm">
                     <div><strong>Status:</strong> {result.photoTest.success ? 'Success' : 'Failed'}</div>
                     {result.photoTest.success ? (
@@ -125,7 +125,7 @@ export default function TestLeadPage() {
               )}
 
               <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Sample Fields:</h3>
+                <h3 className="text-sm font-medium text-black mb-2">Sample Fields:</h3>
                 <div className="space-y-1 text-sm">
                   {Object.entries(result.sampleFields).map(([key, value]) => (
                     <div key={key}>
@@ -136,8 +136,8 @@ export default function TestLeadPage() {
               </div>
 
               <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-900 mb-2">All Available Fields ({result.allFields.length}):</h3>
-                <div className="text-xs text-gray-600 max-h-32 overflow-y-auto">
+                <h3 className="text-sm font-medium text-black mb-2">All Available Fields ({result.allFields.length}):</h3>
+                <div className="text-xs text-black max-h-32 overflow-y-auto">
                   {result.allFields.join(', ')}
                 </div>
               </div>
@@ -146,8 +146,8 @@ export default function TestLeadPage() {
         </div>
 
         <div className="mt-8 pt-6 border-t border-gray-200">
-          <h3 className="text-sm font-medium text-gray-900 mb-2">What this test does:</h3>
-          <ol className="text-xs text-gray-600 space-y-1">
+          <h3 className="text-sm font-medium text-black mb-2">What this test does:</h3>
+          <ol className="text-xs text-black space-y-1">
             <li>1. Fetches the lead with ID: 3000000038009</li>
             <li>2. Attempts to download the lead&apos;s photo</li>
             <li>3. Displays the photo if successful</li>

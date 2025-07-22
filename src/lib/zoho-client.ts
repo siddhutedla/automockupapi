@@ -1,3 +1,5 @@
+import { TokenRefreshService } from './token-refresh';
+
 interface ZohoToken {
   access_token: string;
   refresh_token: string;
@@ -35,41 +37,31 @@ export class ZohoClient {
     }
 
     // Check if token is expired (with 5 minute buffer)
-    if (Date.now() > this.tokens.expires_at - 300000) {
+    if (TokenRefreshService.isTokenExpired(this.tokens.expires_at)) {
+      console.log('🔄 [ZOHO-CLIENT] Token expired, refreshing...');
       await this.refreshAccessToken();
     }
   }
 
   private async refreshAccessToken(): Promise<void> {
-    if (!this.tokens?.refresh_token) {
-      throw new Error('No refresh token available');
+    try {
+      const tokenData = await TokenRefreshService.refreshAccessToken();
+      
+      this.tokens = {
+        ...this.tokens!,
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token || this.tokens!.refresh_token,
+        expires_in: tokenData.expires_in,
+        api_domain: tokenData.api_domain,
+        token_type: tokenData.token_type,
+        expires_at: TokenRefreshService.calculateExpiryTime(tokenData.expires_in)
+      };
+
+      console.log('✅ [ZOHO-CLIENT] Access token refreshed successfully');
+    } catch (error) {
+      console.error('❌ [ZOHO-CLIENT] Failed to refresh access token:', error);
+      throw new Error(`Failed to refresh access token: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-
-    const response = await fetch('https://accounts.zoho.com/oauth/v2/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        client_id: process.env.ZOHO_CLIENT_ID || '',
-        client_secret: process.env.ZOHO_CLIENT_SECRET || '',
-        refresh_token: this.tokens.refresh_token,
-      }),
-    });
-
-    const tokenData = await response.json();
-
-    if (!response.ok) {
-      throw new Error('Failed to refresh access token');
-    }
-
-    this.tokens = {
-      ...this.tokens,
-      access_token: tokenData.access_token,
-      expires_in: tokenData.expires_in,
-      expires_at: Date.now() + (tokenData.expires_in * 1000)
-    };
   }
 
   async getContacts(limit: number = 200): Promise<Record<string, unknown>[]> {

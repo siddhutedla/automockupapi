@@ -124,7 +124,7 @@ export default function MockupHistory({ onSelectMockup }: MockupHistoryProps) {
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
           <div className="flex items-center space-x-2 mb-3">
             <Filter className="h-4 w-4 text-gray-600" />
-            <h3 className="text-sm font-medium text-gray-700">Filters</h3>
+            <h3 className="text-sm font-medium text-black">Filters</h3>
           </div>
         </div>
         <div className="text-center py-8">

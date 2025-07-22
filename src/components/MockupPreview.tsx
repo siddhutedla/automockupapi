@@ -60,14 +60,14 @@ export default function MockupPreview({
   if (!logoUrl || selectedMockupTypes.length === 0) {
     return (
       <div className="bg-gray-50 rounded-lg p-6 text-center">
-        <p className="text-gray-500">Upload a logo and select mockup types to see a preview</p>
+        <p className="text-black">Upload a logo and select mockup types to see a preview</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium text-gray-900">Preview</h3>
+              <h3 className="text-lg font-medium text-black">Preview</h3>
       {previewUrl ? (
         <div className="relative">
           <img
@@ -75,14 +75,14 @@ export default function MockupPreview({
             alt="Mockup preview"
             className="w-full h-auto rounded-lg border border-gray-200"
           />
-          <div className="mt-2 text-sm text-gray-600">
+          <div className="mt-2 text-sm text-black">
             Preview of: {selectedMockupTypes[0].replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
           </div>
         </div>
       ) : (
         <div className="bg-gray-50 rounded-lg p-6 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-          <p className="text-gray-500">Generating preview...</p>
+          <p className="text-black">Generating preview...</p>
         </div>
       )}
     </div>

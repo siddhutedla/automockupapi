@@ -29,7 +29,7 @@ export default function LogoPositionSelector({ selectedPosition, onPositionChang
   if (!mounted) {
     return (
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-black mb-2">
           Logo Position *
         </label>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -67,7 +67,7 @@ export default function LogoPositionSelector({ selectedPosition, onPositionChang
               <MapPin className="h-4 w-4" />
               <div>
                 <div className="font-medium text-sm">{option.label}</div>
-                <div className="text-xs text-gray-500">{option.description}</div>
+                <div className="text-xs text-black">{option.description}</div>
               </div>
             </div>
           </button>

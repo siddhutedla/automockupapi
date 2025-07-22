@@ -99,7 +99,7 @@ export default function ImageUpload({
           {isUploading ? (
             <div className="flex flex-col items-center space-y-2">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-              <p className="text-sm text-gray-600">Uploading...</p>
+              <p className="text-sm text-black">Uploading...</p>
             </div>
           ) : (
             <div className="flex flex-col items-center space-y-2">
@@ -108,13 +108,13 @@ export default function ImageUpload({
               ) : (
                 <ImageIcon className="h-8 w-8 text-gray-400" />
               )}
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-black">
                 {isDragActive 
                   ? 'Drop your logo here' 
                   : 'Drag & drop your logo here, or click to select'
                 }
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-black">
                 PNG, JPG, GIF up to 5MB
               </p>
             </div>

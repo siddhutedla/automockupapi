@@ -161,7 +161,7 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
 
       {/* Logo Upload */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-black mb-2">
           Upload Your Logo *
         </label>
         <ImageUpload
@@ -183,7 +183,7 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Enter Zoho CRM Lead ID to fetch logo from custom field"
         />
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-black mt-1">
           If provided, the logo will be fetched from the lead&apos;s &quot;Image Logo&quot; custom field instead of uploading
         </p>
       </div>
@@ -191,7 +191,7 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
       {/* Company Information */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-black mb-2">
             Company Name *
           </label>
           <input
@@ -205,7 +205,7 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-black mb-2">
             Tagline (Optional)
           </label>
           <input
@@ -235,7 +235,7 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
 
       {/* Mockup Type Selection */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-black mb-2">
           Mockup Types *
         </label>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -264,7 +264,7 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
                 }}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <span className="text-sm text-gray-700">{type.label}</span>
+              <span className="text-sm text-black">{type.label}</span>
             </label>
           ))}
         </div>

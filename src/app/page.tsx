@@ -62,10 +62,10 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            <h1 className="text-4xl font-bold text-black mb-2">
               Create Your Mockups
             </h1>
-            <p className="text-lg text-gray-600">
+            <p className="text-lg text-black">
               Generate professional apparel mockups with your logo and branding
             </p>
           </div>
@@ -78,7 +78,7 @@ export default function Home() {
                 className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
                   activeTab === 'form'
                     ? 'bg-blue-600 text-white'
-                    : 'text-gray-600 hover:text-gray-900'
+                    : 'text-black hover:text-gray-900'
                 }`}
               >
                 <FileText className="h-4 w-4" />
@@ -89,7 +89,7 @@ export default function Home() {
                 className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
                   activeTab === 'history'
                     ? 'bg-blue-600 text-white'
-                    : 'text-gray-600 hover:text-gray-900'
+                    : 'text-black hover:text-gray-900'
                 }`}
               >
                 <History className="h-4 w-4" />
@@ -104,7 +104,7 @@ export default function Home() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               {activeTab === 'form' ? (
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                  <h2 className="text-xl font-semibold text-black mb-6">
                     Generate New Mockups
                   </h2>
                   <MockupForm
@@ -119,7 +119,7 @@ export default function Home() {
                 </div>
               ) : (
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                  <h2 className="text-xl font-semibold text-black mb-6">
                     Mockup History
                   </h2>
                   <MockupHistory onSelectMockup={handleSelectMockup} />
@@ -129,13 +129,13 @@ export default function Home() {
 
             {/* Right Column - Results */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              <h2 className="text-xl font-semibold text-black mb-6">
                 {results ? 'Generated Mockups' : 'Preview'}
               </h2>
               {results ? (
                 <MockupResults results={results} />
               ) : (
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-black">
                   <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                     <FileText className="h-8 w-8 text-gray-400" />
                   </div>

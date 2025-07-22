@@ -39,12 +39,45 @@ export async function GET(request: NextRequest) {
     // Get lead attachments
     const attachments = await zohoClient.getLeadAttachments(leadId);
     
+    // Test downloading the first image attachment if available
+    let downloadTest = null;
+    if (attachments && attachments.length > 0) {
+      const imageAttachment = attachments.find((attachment: Record<string, unknown>) => {
+        const fileName = (attachment.File_Name as string || '').toLowerCase();
+        const fileType = (attachment.File_Type as string || '').toLowerCase();
+        return fileType.startsWith('image/') || 
+               fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || 
+               fileName.endsWith('.png') || fileName.endsWith('.gif') || 
+               fileName.endsWith('.webp') || fileName.endsWith('.svg');
+      });
+
+      if (imageAttachment) {
+        try {
+          const attachmentId = imageAttachment.id as string;
+          const imageBuffer = await zohoClient.downloadAttachment(leadId, attachmentId);
+          downloadTest = {
+            success: true,
+            attachmentId,
+            fileName: imageAttachment.File_Name,
+            fileSize: imageBuffer.length,
+            message: 'Attachment download successful'
+          };
+        } catch (downloadError) {
+          downloadTest = {
+            success: false,
+            error: downloadError instanceof Error ? downloadError.message : 'Download failed'
+          };
+        }
+      }
+    }
+    
     const result = {
       leadId,
       leadFound: true,
       hasAttachments: attachments && attachments.length > 0,
       attachmentCount: attachments ? attachments.length : 0,
       attachments: attachments || [],
+      downloadTest,
       allFields: Object.keys(lead),
       sampleFields: {
         First_Name: lead['First_Name'],

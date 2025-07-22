@@ -44,7 +44,7 @@ The system now uses Zoho CRM v2 API attachments instead of custom fields:
 const response = await fetch('/api/test-lead?leadId=6764494000001367196');
 const result = await response.json();
 console.log(result.data);
-// Returns lead info and attachment details
+// Returns lead info, attachment details, and download test results
 ```
 
 #### Mockup Generation with Lead Attachments

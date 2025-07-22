@@ -43,7 +43,6 @@ export class MockupGenerator {
   async generateMockup(options: MockupGenerationOptions): Promise<MockupResult> {
     try {
       const { logoPath, mockupType, industry, companyName, tagline } = options;
-      const industryConfig = getIndustryConfig(industry);
 
       // Check cache first
       const cacheKey = cacheManager.generateMockupKey({
@@ -115,7 +114,7 @@ export class MockupGenerator {
     const positioning = this.getRealisticPositioning(mockupType, industryConfig.styling.layout, width, height, logoSize, options.logoPosition);
     
     // Process logo with adjusted size
-    const processedLogo = await this.processLogoForRealisticApplication(logoPath, positioning.logoSize, industryConfig);
+    const processedLogo = await this.processLogoForRealisticApplication(logoPath, positioning.logoSize);
 
     // Create text overlays with realistic styling
     const textOverlays = await this.createRealisticTextOverlays(companyName, tagline, industryConfig, width, height);
@@ -143,7 +142,7 @@ export class MockupGenerator {
     return `/uploads/${filename}`;
   }
 
-  private async processLogoForRealisticApplication(logoPath: string, logoSize: number, industryConfig: IndustryConfig) {
+  private async processLogoForRealisticApplication(logoPath: string, logoSize: number) {
     try {
       // Check if the logo is already in vector format
       const isVector = await LogoVectorizer.isVectorFormat(logoPath);

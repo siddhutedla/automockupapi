@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Industry, MockupType } from '@/types';
-import { getIndustryConfig, getRecommendedColors, getRecommendedMockupTypes } from '@/lib/industry-configs';
+import { getIndustryConfig, getRecommendedMockupTypes } from '@/lib/industry-configs';
 
 interface IndustrySelectorProps {
   selectedIndustry: Industry;
@@ -30,17 +30,12 @@ export default function IndustrySelector({
 }: IndustrySelectorProps) {
   const [showDetails, setShowDetails] = useState(false);
   const industryConfig = getIndustryConfig(selectedIndustry);
-  const recommendedColors = getRecommendedColors(selectedIndustry);
-  const recommendedMockupTypes = getRecommendedMockupTypes(selectedIndustry);
 
   const handleIndustryChange = (industry: Industry) => {
     onIndustryChange(industry);
     
-    // Auto-apply recommended colors and mockup types
-    const newColors = getRecommendedColors(industry);
+    // Auto-apply recommended mockup types
     const newMockupTypes = getRecommendedMockupTypes(industry);
-    
-    // onColorChange(newColors.primary, newColors.secondary); // Removed color change
     onMockupTypeChange(newMockupTypes);
   };
 

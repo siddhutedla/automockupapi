@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -104,11 +104,18 @@ export function generateRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-export function validateRequiredFields(data: any, requiredFields: string[]): string[] {
+export function validateRequiredFields(data: Record<string, unknown> | { [key: string]: unknown } | unknown, requiredFields: string[]): string[] {
   const errors: string[] = [];
   
+  // Type guard to ensure data is an object
+  if (typeof data !== 'object' || data === null) {
+    return requiredFields.map(field => `${field} is required`);
+  }
+  
+  const dataObj = data as Record<string, unknown>;
+  
   for (const field of requiredFields) {
-    if (!data[field] || (typeof data[field] === 'string' && data[field].trim() === '')) {
+    if (!dataObj[field] || (typeof dataObj[field] === 'string' && dataObj[field].trim() === '')) {
       errors.push(`${field} is required`);
     }
   }

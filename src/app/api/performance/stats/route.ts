@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { ApiResponseHandler, generateRequestId } from '@/lib/api-response';
 import { cacheManager } from '@/lib/cache-manager';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const requestId = generateRequestId();
   
   try {

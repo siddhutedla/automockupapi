@@ -14,18 +14,7 @@ interface MockupFormProps {
   onImageUpload?: (file: File) => void;
 }
 
-const MOCKUP_TYPES: { value: MockupType; label: string }[] = [
-  { value: 'tshirt-front', label: 'T-Shirt (Front)' },
-  { value: 'tshirt-back', label: 'T-Shirt (Back)' },
-  { value: 'hoodie-front', label: 'Hoodie (Front)' },
-  { value: 'hoodie-back', label: 'Hoodie (Back)' },
-  { value: 'sweatshirt-front', label: 'Sweatshirt (Front)' },
-  { value: 'sweatshirt-back', label: 'Sweatshirt (Back)' },
-  { value: 'polo-front', label: 'Polo (Front)' },
-  { value: 'polo-back', label: 'Polo (Back)' },
-  { value: 'tank-top-front', label: 'Tank Top (Front)' },
-  { value: 'tank-top-back', label: 'Tank Top (Back)' }
-];
+
 
 export default function MockupForm({ onSubmit, isLoading = false, onChange, onImageUpload }: MockupFormProps) {
   const [mounted, setMounted] = useState(false);

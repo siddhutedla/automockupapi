@@ -5,7 +5,7 @@ interface CacheEntry<T> {
 }
 
 export class CacheManager {
-  private cache = new Map<string, CacheEntry<any>>();
+  private cache = new Map<string, CacheEntry<unknown>>();
   private readonly defaultTTL = 5 * 60 * 1000; // 5 minutes
 
   set<T>(key: string, data: T, ttl: number = this.defaultTTL): void {
@@ -68,7 +68,7 @@ export class CacheManager {
     
     return {
       totalEntries: entries.length,
-      expiredEntries: entries.filter(([_, entry]) => now - entry.timestamp > entry.ttl).length,
+      expiredEntries: entries.filter(([, entry]) => now - entry.timestamp > entry.ttl).length,
       memoryUsage: process.memoryUsage()
     };
   }

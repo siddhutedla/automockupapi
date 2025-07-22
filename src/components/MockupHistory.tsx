@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { MockupResponse, MockupType } from '@/types';
-import { Download, Trash2, Eye, Filter } from 'lucide-react';
+import { Download, Eye, Filter } from 'lucide-react';
 
 interface MockupHistoryProps {
   onSelectMockup?: (mockup: MockupResponse) => void;
@@ -59,7 +59,7 @@ export default function MockupHistory({ onSelectMockup }: MockupHistoryProps) {
       } else {
         setError(result.error || 'Failed to fetch history');
       }
-    } catch (error) {
+    } catch {
       setError('Failed to fetch history');
     } finally {
       setLoading(false);
@@ -69,7 +69,7 @@ export default function MockupHistory({ onSelectMockup }: MockupHistoryProps) {
   useEffect(() => {
     setMounted(true);
     fetchHistory(1, true);
-  }, [filters]);
+  }, [filters, fetchHistory]);
 
   const handleLoadMore = () => {
     if (!loading && hasMore) {

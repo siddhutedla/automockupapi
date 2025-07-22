@@ -3,16 +3,27 @@
 import { useState, useEffect } from 'react';
 import { Activity, Database, Cpu, HardDrive, Clock, RefreshCw } from 'lucide-react';
 
+interface MemoryUsage {
+  heapUsed: number;
+  heapTotal: number;
+  external: number;
+}
+
+interface CpuUsage {
+  user: number;
+  system: number;
+}
+
 interface PerformanceStats {
   cache: {
     totalEntries: number;
     expiredEntries: number;
-    memoryUsage: any;
+    memoryUsage: MemoryUsage;
   };
   system: {
     uptime: number;
-    memory: any;
-    cpu: any;
+    memory: MemoryUsage;
+    cpu: CpuUsage;
     platform: string;
     nodeVersion: string;
   };
@@ -38,7 +49,7 @@ export default function PerformanceMonitor() {
       } else {
         setError(result.error || 'Failed to fetch stats');
       }
-    } catch (error) {
+    } catch {
       setError('Failed to fetch performance statistics');
     } finally {
       setLoading(false);

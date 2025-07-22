@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     
     // Validate required fields
     const requiredFields = ['logoUrl', 'industry', 'companyName', 'mockupTypes'];
-    const validationErrors = validateRequiredFields(body, requiredFields);
+    const validationErrors = validateRequiredFields(body as unknown, requiredFields);
     
     if (validationErrors.length > 0) {
       console.log('Validation errors:', validationErrors);
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const fs = await import('fs/promises');
     try {
       await fs.access(logoPath);
-    } catch (error) {
+    } catch {
       return ApiResponseHandler.notFound('Logo file not found', requestId);
     }
     

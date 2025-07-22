@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MockupType } from '@/types';
 
 interface MockupPreviewProps {
@@ -22,14 +22,7 @@ export default function MockupPreview({
 }: MockupPreviewProps) {
   const [previewUrl, setPreviewUrl] = useState<string>('');
 
-  useEffect(() => {
-    if (logoUrl && selectedMockupTypes.length > 0) {
-      // Create a simple preview by generating a mockup
-      generatePreview();
-    }
-  }, [logoUrl, companyName, tagline, primaryColor, secondaryColor, selectedMockupTypes]);
-
-  const generatePreview = async () => {
+  const generatePreview = useCallback(async () => {
     try {
       const response = await fetch('/api/mockup', {
         method: 'POST',
@@ -55,7 +48,14 @@ export default function MockupPreview({
     } catch (error) {
       console.error('Preview generation error:', error);
     }
-  };
+  }, [logoUrl, companyName, tagline, primaryColor, secondaryColor, selectedMockupTypes]);
+
+  useEffect(() => {
+    if (logoUrl && selectedMockupTypes.length > 0) {
+      // Create a simple preview by generating a mockup
+      generatePreview();
+    }
+  }, [logoUrl, selectedMockupTypes, generatePreview]);
 
   if (!logoUrl || selectedMockupTypes.length === 0) {
     return (

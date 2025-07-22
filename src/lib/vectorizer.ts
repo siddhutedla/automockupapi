@@ -1,7 +1,6 @@
 import sharp from 'sharp';
 import potrace from 'potrace';
 import { writeFile } from 'fs/promises';
-import { join } from 'path';
 
 export interface VectorizationOptions {
   threshold?: number; // 0-255, default 128
@@ -30,8 +29,8 @@ export class LogoVectorizer {
       }
       
       return colors.size;
-    } catch (error) {
-      console.error('Color counting failed:', error);
+    } catch {
+      console.error('Color counting failed');
       return 0;
     }
   }
@@ -151,8 +150,8 @@ export class LogoVectorizer {
         })
         .png()
         .toBuffer();
-    } catch (error) {
-      console.error('Logo enhancement failed:', error);
+    } catch {
+      console.error('Logo enhancement failed');
       throw new Error('Failed to enhance logo quality');
     }
   }
@@ -164,7 +163,7 @@ export class LogoVectorizer {
     try {
       const metadata = await sharp(logoPath).metadata();
       return logoPath.toLowerCase().endsWith('.svg') || metadata.format === 'svg';
-    } catch (error) {
+    } catch {
       return false;
     }
   }

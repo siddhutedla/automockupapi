@@ -153,29 +153,22 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
       .png()
       .toBuffer();
     
-    // Create simple text overlay for company name - using a basic approach
-    const textWidth = companyName.length * 12; // Wider for better spacing
-    const companyText = await sharp({
-      create: {
-        width: textWidth,
-        height: 30,
-        channels: 4,
-        background: { r: 0, g: 0, b: 0, alpha: 0 }
-      }
-    })
-    .composite([
-      {
-        input: Buffer.from(`
-          <svg width="${textWidth}" height="30">
-            <text x="${textWidth/2}" y="20" font-family="monospace" font-size="16" fill="black" text-anchor="middle">${companyName}</text>
-          </svg>
-        `),
-        top: 0,
-        left: 0
-      }
-    ])
-    .png()
-    .toBuffer();
+    // Create company name text using SVG buffer approach
+    const textWidth = companyName.length * 12;
+    const textHeight = 30;
+    
+    const svgText = `
+      <svg width="${textWidth}" height="${textHeight}" xmlns="http://www.w3.org/2000/svg">
+        <text x="50%" y="20" font-family="monospace" font-size="16" fill="black" text-anchor="middle">${companyName}</text>
+      </svg>
+    `;
+    
+    const svgBuffer = Buffer.from(svgText);
+    
+    // Use svgBuffer directly to create an image with sharp
+    const companyText = await sharp(svgBuffer)
+      .png()
+      .toBuffer();
     
     const backMockup = await sharp(backShirtTemplate)
       .composite([

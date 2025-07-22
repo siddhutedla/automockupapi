@@ -1,17 +1,17 @@
 import sharp from 'sharp';
 import { join } from 'path';
-import { MockupType, Industry } from '@/types';
+import { MockupType, Industry, LogoPosition } from '@/types';
 import { getIndustryConfig, IndustryConfig } from '@/lib/industry-configs';
 import { cacheManager } from '@/lib/cache-manager';
+import { LogoVectorizer } from '@/lib/vectorizer';
 
 export interface MockupGenerationOptions {
   logoPath: string;
   mockupType: MockupType;
   industry: Industry;
-  primaryColor?: string;
-  secondaryColor?: string;
   companyName?: string;
   tagline?: string;
+  logoPosition?: LogoPosition;
 }
 
 export interface MockupResult {
@@ -42,15 +42,14 @@ export class MockupGenerator {
 
   async generateMockup(options: MockupGenerationOptions): Promise<MockupResult> {
     try {
-      const { logoPath, mockupType, industry, primaryColor, secondaryColor, companyName, tagline } = options;
+      const { logoPath, mockupType, industry, companyName, tagline } = options;
+      const industryConfig = getIndustryConfig(industry);
 
       // Check cache first
       const cacheKey = cacheManager.generateMockupKey({
         logoPath,
         mockupType,
         industry,
-        primaryColor: primaryColor || '#3B82F6',
-        secondaryColor: secondaryColor || '#1E40AF',
         companyName: companyName || '',
         tagline: tagline || ''
       });
@@ -64,8 +63,6 @@ export class MockupGenerator {
         logoPath,
         mockupType,
         industry,
-        primaryColor,
-        secondaryColor,
         companyName,
         tagline
       });
@@ -89,7 +86,7 @@ export class MockupGenerator {
   }
 
   private async createRealisticMockup(options: MockupGenerationOptions): Promise<string> {
-    const { logoPath, mockupType, industry, primaryColor = '#3B82F6', secondaryColor = '#1E40AF', companyName, tagline } = options;
+    const { logoPath, mockupType, industry, companyName, tagline } = options;
 
     // Get industry-specific configuration
     const industryConfig = getIndustryConfig(industry);
@@ -113,19 +110,18 @@ export class MockupGenerator {
 
     // Process the logo with realistic effects
     const logoSize = this.getLogoSize(industryConfig.styling.logoSize);
-    const processedLogo = await this.processLogoForRealisticApplication(logoPath, logoSize, industryConfig);
-
-    // Create text overlays with realistic styling
-    const textOverlays = await this.createRealisticTextOverlays(companyName, tagline, secondaryColor, industryConfig, width, height);
 
     // Get realistic positioning based on shirt type and layout
-    const positioning = this.getRealisticPositioning(mockupType, industryConfig.styling.layout, width, height, logoSize);
+    const positioning = this.getRealisticPositioning(mockupType, industryConfig.styling.layout, width, height, logoSize, options.logoPosition);
+    
+    // Process logo with adjusted size
+    const processedLogo = await this.processLogoForRealisticApplication(logoPath, positioning.logoSize, industryConfig);
 
-    // Apply color tinting to the shirt if needed
-    const tintedShirt = await this.applyShirtColorTinting(shirtTemplate, primaryColor);
+    // Create text overlays with realistic styling
+    const textOverlays = await this.createRealisticTextOverlays(companyName, tagline, industryConfig, width, height);
 
-    // Composite everything together with realistic effects
-    const mockup = await sharp(tintedShirt)
+    // Composite everything together - keep shirt white, just add logo
+    const mockup = await sharp(shirtTemplate)
       .composite([
         {
           input: processedLogo,
@@ -148,39 +144,39 @@ export class MockupGenerator {
   }
 
   private async processLogoForRealisticApplication(logoPath: string, logoSize: number, industryConfig: IndustryConfig) {
-    // Process logo with realistic fabric application effects
-    const logo = await sharp(logoPath)
-      .resize(logoSize, logoSize, { fit: 'inside', withoutEnlargement: true })
-      .png()
-      .toBuffer();
-
-    // Create a fabric-like texture overlay
-    const fabricTexture = await this.createFabricTexture(logoSize, logoSize);
-    
-    // Blend logo with fabric texture for realistic appearance
-    const realisticLogo = await sharp(logo)
-      .composite([
-        {
-          input: fabricTexture,
-          blend: 'overlay',
-          top: 0,
-          left: 0
-        }
-      ])
-      .png()
-      .toBuffer();
-
-    return realisticLogo;
+    try {
+      // Check if the logo is already in vector format
+      const isVector = await LogoVectorizer.isVectorFormat(logoPath);
+      
+      if (isVector) {
+        // For SVG logos, convert to high-quality PNG
+        return await sharp(logoPath)
+          .resize(logoSize, logoSize, { fit: 'inside', withoutEnlargement: true })
+          .png()
+          .toBuffer();
+      } else {
+        // For raster logos, use high-quality processing
+        console.log('Using high-quality raster processing for:', logoPath);
+        return await LogoVectorizer.enhanceLogoQuality(logoPath, logoSize);
+      }
+    } catch (error) {
+      console.error('Logo processing error:', error);
+      // Fallback to basic processing if everything fails
+      return await sharp(logoPath)
+        .resize(logoSize, logoSize, { fit: 'inside', withoutEnlargement: true })
+        .png()
+        .toBuffer();
+    }
   }
 
   private async createFabricTexture(width: number, height: number) {
-    // Create a subtle fabric texture pattern
+    // Create a subtle fabric texture pattern that matches the logo dimensions
     const texture = await sharp({
       create: {
         width,
         height,
         channels: 4,
-        background: { r: 255, g: 255, b: 255, alpha: 0.1 }
+        background: { r: 255, g: 255, b: 255, alpha: 0.05 }
       }
     })
     .png()
@@ -202,9 +198,9 @@ export class MockupGenerator {
     return tinted;
   }
 
-  private async createRealisticTextOverlays(companyName: string | undefined, tagline: string | undefined, color: string, industryConfig: IndustryConfig, width: number, height: number) {
+  private async createRealisticTextOverlays(companyName: string | undefined, tagline: string | undefined, industryConfig: IndustryConfig, width: number, height: number) {
     const overlays = [];
-    const rgb = this.hexToRgb(color);
+    const rgb = this.hexToRgb(industryConfig.primaryColors[0]);
 
     if (companyName) {
       const fontSize = this.getTextSize(industryConfig.styling.textStyle);
@@ -261,31 +257,77 @@ export class MockupGenerator {
     return textImage;
   }
 
-  private getRealisticPositioning(mockupType: MockupType, layout: string, width: number, height: number, logoSize: number) {
-    // Position logo realistically on the shirt based on type and layout
-    let logoTop, logoLeft;
-
-    switch (layout) {
-      case 'corner':
-        logoTop = Math.floor(height * 0.15);
-        logoLeft = Math.floor(width * 0.1);
-        break;
-      case 'full-width':
-        logoTop = Math.floor(height * 0.25);
-        logoLeft = Math.floor((width - logoSize) / 2);
-        break;
-      default: // centered
-        logoTop = Math.floor(height * 0.25);
-        logoLeft = Math.floor((width - logoSize) / 2);
-        break;
+  private getRealisticPositioning(mockupType: MockupType, layout: string, width: number, height: number, logoSize: number, logoPosition?: LogoPosition) {
+    const margin = 50;
+    const maxLogoWidth = width * 0.4; // Max 40% of shirt width
+    const maxLogoHeight = height * 0.3; // Max 30% of shirt height
+    
+    // Adjust logo size based on position
+    let adjustedLogoSize = Math.min(logoSize, maxLogoWidth, maxLogoHeight);
+    
+    // Default positioning based on layout
+    let logoTop = height * 0.3;
+    let logoLeft = (width - adjustedLogoSize) / 2;
+    
+    // Apply preset positioning if specified
+    if (logoPosition) {
+      switch (logoPosition) {
+        case 'center':
+          logoTop = height * 0.3;
+          logoLeft = (width - adjustedLogoSize) / 2;
+          break;
+        case 'left-chest':
+          logoTop = height * 0.25;
+          logoLeft = margin;
+          adjustedLogoSize = Math.min(adjustedLogoSize, width * 0.25);
+          break;
+        case 'right-chest':
+          logoTop = height * 0.25;
+          logoLeft = width - adjustedLogoSize - margin;
+          adjustedLogoSize = Math.min(adjustedLogoSize, width * 0.25);
+          break;
+        case 'top-left':
+          logoTop = margin;
+          logoLeft = margin;
+          break;
+        case 'top-right':
+          logoTop = margin;
+          logoLeft = width - adjustedLogoSize - margin;
+          break;
+        case 'bottom-left':
+          logoTop = height - adjustedLogoSize - margin;
+          logoLeft = margin;
+          break;
+        case 'bottom-right':
+          logoTop = height - adjustedLogoSize - margin;
+          logoLeft = width - adjustedLogoSize - margin;
+          break;
+      }
+    } else {
+      // Use layout-based positioning as fallback
+      switch (layout) {
+        case 'centered':
+          logoTop = height * 0.3;
+          logoLeft = (width - adjustedLogoSize) / 2;
+          break;
+        case 'corner':
+          logoTop = height * 0.25;
+          logoLeft = margin;
+          adjustedLogoSize = Math.min(adjustedLogoSize, width * 0.25);
+          break;
+        case 'full-width':
+          logoTop = height * 0.2;
+          logoLeft = margin;
+          adjustedLogoSize = width - (margin * 2);
+          break;
+      }
     }
-
-    // Adjust positioning based on shirt type
-    if (mockupType.includes('back')) {
-      logoTop = Math.floor(height * 0.2); // Slightly higher on back
-    }
-
-    return { logoTop, logoLeft };
+    
+    return {
+      logoTop: Math.round(logoTop),
+      logoLeft: Math.round(logoLeft),
+      logoSize: Math.round(adjustedLogoSize)
+    };
   }
 
   private getLogoSize(size: 'small' | 'medium' | 'large'): number {

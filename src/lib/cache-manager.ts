@@ -49,13 +49,11 @@ export class CacheManager {
     logoPath: string;
     mockupType: string;
     industry: string;
-    primaryColor: string;
-    secondaryColor: string;
     companyName: string;
     tagline: string;
   }): string {
-    const { logoPath, mockupType, industry, primaryColor, secondaryColor, companyName, tagline } = options;
-    return `mockup:${mockupType}:${industry}:${primaryColor}:${secondaryColor}:${companyName}:${tagline}:${logoPath}`;
+    const { logoPath, mockupType, industry, companyName, tagline } = options;
+    return `mockup:${mockupType}:${industry}:${companyName}:${tagline}:${logoPath}`;
   }
 
   // Generate cache key for industry config

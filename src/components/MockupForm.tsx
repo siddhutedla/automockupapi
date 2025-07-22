@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Industry, MockupType, MockupFormData } from '@/types';
+import { MockupFormData, MockupType, Industry, LogoPosition } from '@/types';
 import ImageUpload from './ImageUpload';
 import IndustrySelector from './IndustrySelector';
+import LogoPositionSelector from './LogoPositionSelector';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 
 interface MockupFormProps {
@@ -27,19 +28,23 @@ const MOCKUP_TYPES: { value: MockupType; label: string }[] = [
 ];
 
 export default function MockupForm({ onSubmit, isLoading = false, onChange, onImageUpload }: MockupFormProps) {
+  const [mounted, setMounted] = useState(false);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string>('');
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const [uploadError, setUploadError] = useState<string>('');
+
   const [formData, setFormData] = useState<MockupFormData>({
     logo: null,
     industry: 'technology',
     companyName: '',
     tagline: '',
-    primaryColor: '#3B82F6',
-    secondaryColor: '#1E40AF',
-    mockupTypes: ['tshirt-front']
+    mockupTypes: [],
+    logoPosition: 'center' as LogoPosition
   });
 
-  const [uploadedImageUrl, setUploadedImageUrl] = useState<string>('');
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
-  const [uploadError, setUploadError] = useState<string>('');
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Call onChange when form data changes
   useEffect(() => {
@@ -49,6 +54,12 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
   }, [formData, onChange]);
 
   const handleImageUpload = async (file: File) => {
+    console.log('MockupForm: handleImageUpload called with file:', {
+      name: file.name,
+      type: file.type,
+      size: file.size
+    });
+    
     setUploadStatus('uploading');
     setUploadError('');
 
@@ -56,16 +67,28 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
     formData.append('file', file);
 
     try {
+      console.log('MockupForm: Sending upload request');
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData
       });
 
+      console.log('MockupForm: Upload response status:', response.status);
+      
+      if (!response.ok) {
+        console.log('MockupForm: Response not ok, status:', response.status);
+        const errorText = await response.text();
+        console.log('MockupForm: Error response text:', errorText);
+        throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+      }
+      
       const result = await response.json();
+      console.log('MockupForm: Upload response:', result);
 
-      if (result.success && result.url) {
-        setUploadedImageUrl(result.url);
-        setFormData(prev => ({ ...prev, logo: file }));
+      if (result.success && result.data?.url) {
+        console.log('MockupForm: Upload successful, setting URL:', result.data.url);
+        setUploadedImageUrl(result.data.url);
+        setFormData(prev => ({ ...prev, logo: file, logoUrl: result.data.url }));
         setUploadStatus('success');
         
         // Call onImageUpload if provided
@@ -76,10 +99,11 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
         // Clear success status after 3 seconds
         setTimeout(() => setUploadStatus('idle'), 3000);
       } else {
+        console.log('MockupForm: Upload failed:', result.error);
         throw new Error(result.error || 'Upload failed');
       }
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('MockupForm: Upload error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
       setUploadError(errorMessage);
       setUploadStatus('error');
@@ -88,7 +112,7 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
 
   const handleImageRemove = () => {
     setUploadedImageUrl('');
-    setFormData(prev => ({ ...prev, logo: null }));
+    setFormData(prev => ({ ...prev, logo: null, logoUrl: undefined }));
     setUploadStatus('idle');
     setUploadError('');
   };
@@ -97,16 +121,12 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
     setFormData(prev => ({ ...prev, industry }));
   };
 
-  const handleColorChange = (primary: string, secondary: string) => {
-    setFormData(prev => ({ 
-      ...prev, 
-      primaryColor: primary,
-      secondaryColor: secondary
-    }));
-  };
-
   const handleMockupTypeChange = (types: MockupType[]) => {
     setFormData(prev => ({ ...prev, mockupTypes: types }));
+  };
+
+  const handleLogoPositionChange = (position: LogoPosition) => {
+    setFormData(prev => ({ ...prev, logoPosition: position }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -194,59 +214,44 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
       <IndustrySelector
         selectedIndustry={formData.industry}
         onIndustryChange={handleIndustryChange}
-        onColorChange={handleColorChange}
         onMockupTypeChange={handleMockupTypeChange}
       />
 
-      {/* Color Selection */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Primary Color
-          </label>
-          <input
-            type="color"
-            value={formData.primaryColor}
-            onChange={(e) => setFormData(prev => ({ ...prev, primaryColor: e.target.value }))}
-            className="w-full h-10 border border-gray-300 rounded-md cursor-pointer"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Secondary Color (Optional)
-          </label>
-          <input
-            type="color"
-            value={formData.secondaryColor}
-            onChange={(e) => setFormData(prev => ({ ...prev, secondaryColor: e.target.value }))}
-            className="w-full h-10 border border-gray-300 rounded-md cursor-pointer"
-          />
-        </div>
-      </div>
+      {/* Logo Position Selection */}
+      {mounted && (
+        <LogoPositionSelector
+          selectedPosition={formData.logoPosition || 'center'}
+          onPositionChange={handleLogoPositionChange}
+        />
+      )}
 
       {/* Mockup Type Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Select Mockup Types *
+          Mockup Types *
         </label>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {MOCKUP_TYPES.map(type => (
-            <label key={type.value} className="flex items-center space-x-2 cursor-pointer p-2 rounded border border-gray-200 hover:bg-gray-50">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {[
+            { value: 'tshirt-front', label: 'T-Shirt Front' },
+            { value: 'tshirt-back', label: 'T-Shirt Back' },
+            { value: 'hoodie-front', label: 'Hoodie Front' },
+            { value: 'hoodie-back', label: 'Hoodie Back' },
+            { value: 'sweatshirt-front', label: 'Sweatshirt Front' },
+            { value: 'sweatshirt-back', label: 'Sweatshirt Back' },
+            { value: 'polo-front', label: 'Polo Front' },
+            { value: 'polo-back', label: 'Polo Back' },
+            { value: 'tank-top-front', label: 'Tank Top Front' },
+            { value: 'tank-top-back', label: 'Tank Top Back' }
+          ].map((type) => (
+            <label key={type.value} className="flex items-center space-x-2">
               <input
                 type="checkbox"
-                checked={formData.mockupTypes.includes(type.value)}
+                checked={formData.mockupTypes.includes(type.value as MockupType)}
                 onChange={(e) => {
                   if (e.target.checked) {
-                    setFormData(prev => ({
-                      ...prev,
-                      mockupTypes: [...prev.mockupTypes, type.value]
-                    }));
+                    handleMockupTypeChange([...formData.mockupTypes, type.value as MockupType]);
                   } else {
-                    setFormData(prev => ({
-                      ...prev,
-                      mockupTypes: prev.mockupTypes.filter(t => t !== type.value)
-                    }));
+                    handleMockupTypeChange(formData.mockupTypes.filter(t => t !== type.value));
                   }
                 }}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -255,22 +260,13 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
             </label>
           ))}
         </div>
-        <p className="text-xs text-gray-500 mt-2">
-          Select one or more mockup types to generate
-        </p>
       </div>
 
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={isLoading || !formData.logo || uploadStatus === 'uploading'}
-        className={`
-          w-full py-3 px-4 rounded-md font-medium transition-colors
-          ${isLoading || !formData.logo || uploadStatus === 'uploading'
-            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            : 'bg-blue-600 text-white hover:bg-blue-700'
-          }
-        `}
+        disabled={isLoading}
+        className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isLoading ? 'Generating Mockups...' : 'Generate Mockups'}
       </button>

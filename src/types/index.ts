@@ -22,14 +22,23 @@ export type MockupType =
   | 'tank-top-front'
   | 'tank-top-back';
 
+export type LogoPosition = 
+  | 'center'
+  | 'left-chest'
+  | 'right-chest'
+  | 'top-left'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-right';
+
 export interface MockupFormData {
   logo: File | null;
+  logoUrl?: string;
   industry: Industry;
   companyName: string;
   tagline?: string;
-  primaryColor: string;
-  secondaryColor?: string;
   mockupTypes: MockupType[];
+  logoPosition?: LogoPosition;
 }
 
 export interface MockupRequest {
@@ -37,9 +46,8 @@ export interface MockupRequest {
   industry: Industry;
   companyName: string;
   tagline?: string;
-  primaryColor: string;
-  secondaryColor?: string;
   mockupTypes: MockupType[];
+  logoPosition?: LogoPosition;
 }
 
 export interface MockupResponse {

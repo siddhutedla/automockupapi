@@ -7,7 +7,6 @@ import { getIndustryConfig, getRecommendedColors, getRecommendedMockupTypes } fr
 interface IndustrySelectorProps {
   selectedIndustry: Industry;
   onIndustryChange: (industry: Industry) => void;
-  onColorChange: (primary: string, secondary: string) => void;
   onMockupTypeChange: (types: MockupType[]) => void;
 }
 
@@ -27,7 +26,6 @@ const INDUSTRIES: { value: Industry; label: string }[] = [
 export default function IndustrySelector({
   selectedIndustry,
   onIndustryChange,
-  onColorChange,
   onMockupTypeChange
 }: IndustrySelectorProps) {
   const [showDetails, setShowDetails] = useState(false);
@@ -42,7 +40,7 @@ export default function IndustrySelector({
     const newColors = getRecommendedColors(industry);
     const newMockupTypes = getRecommendedMockupTypes(industry);
     
-    onColorChange(newColors.primary, newColors.secondary);
+    // onColorChange(newColors.primary, newColors.secondary); // Removed color change
     onMockupTypeChange(newMockupTypes);
   };
 
@@ -88,7 +86,7 @@ export default function IndustrySelector({
                 {industryConfig.primaryColors.map((color, index) => (
                   <button
                     key={index}
-                    onClick={() => onColorChange(color, industryConfig.secondaryColors[0])}
+                    onClick={() => {/* Removed color change */}}
                     className="w-8 h-8 rounded-full border-2 border-white shadow-md"
                     style={{ backgroundColor: color }}
                     title={`Primary: ${color}`}

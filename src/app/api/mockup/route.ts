@@ -10,11 +10,14 @@ export async function POST(request: NextRequest) {
   try {
     const body: MockupRequest = await request.json();
     
+    console.log('Mockup API received:', body);
+    
     // Validate required fields
     const requiredFields = ['logoUrl', 'industry', 'companyName', 'mockupTypes'];
     const validationErrors = validateRequiredFields(body, requiredFields);
     
     if (validationErrors.length > 0) {
+      console.log('Validation errors:', validationErrors);
       return ApiResponseHandler.validationError(validationErrors, requestId);
     }
 
@@ -72,10 +75,9 @@ export async function POST(request: NextRequest) {
       logoPath,
       industry: body.industry,
       mockupTypes: body.mockupTypes,
-      primaryColor: body.primaryColor,
-      secondaryColor: body.secondaryColor,
       companyName: body.companyName,
-      tagline: body.tagline
+      tagline: body.tagline,
+      logoPosition: body.logoPosition
     });
 
     // Check if all mockups were generated successfully

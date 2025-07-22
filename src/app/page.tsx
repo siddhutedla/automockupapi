@@ -25,13 +25,12 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          logoUrl: formData.logo ? `/uploads/${formData.logo.name}` : '',
+          logoUrl: formData.logoUrl || '',
           industry: formData.industry,
           companyName: formData.companyName,
           tagline: formData.tagline,
-          primaryColor: formData.primaryColor,
-          secondaryColor: formData.secondaryColor,
           mockupTypes: formData.mockupTypes,
+          logoPosition: formData.logoPosition || 'center',
         }),
       });
 

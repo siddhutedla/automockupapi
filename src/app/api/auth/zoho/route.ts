@@ -6,10 +6,18 @@ const ZOHO_CLIENT_ID = process.env.ZOHO_CLIENT_ID || '';
 const ZOHO_CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET || '';
 const ZOHO_REDIRECT_URI = process.env.ZOHO_REDIRECT_URI || 'https://automockupapi-git-main-siddhutedlas-projects.vercel.app/api/auth/zoho/callback';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const requestId = generateRequestId();
   
   try {
+    // Check for password protection
+    const { searchParams } = new URL(request.url);
+    const password = searchParams.get('password');
+    
+    if (password !== 'banana_split_yummy') {
+      return ApiResponseHandler.unauthorized('Password required to initiate OAuth flow', requestId);
+    }
+
     // Generate authorization URL for Zoho CRM
     const authUrl = new URL('https://accounts.zoho.com/oauth/v2/auth');
     authUrl.searchParams.set('response_type', 'code');

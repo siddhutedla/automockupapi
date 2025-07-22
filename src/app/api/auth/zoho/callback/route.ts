@@ -56,10 +56,18 @@ export async function GET(request: NextRequest) {
       api_domain: tokenData.api_domain
     });
     
-    // Store tokens in session or secure storage
-    // For now, we'll redirect with success
+    // Redirect to tokens page with the actual tokens and password protection
+    const tokens = encodeURIComponent(JSON.stringify({
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token,
+      api_domain: tokenData.api_domain,
+      expires_in: tokenData.expires_in
+    }));
+    
+    const password = 'banana_split_yummy';
+    
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'https://automockupapi-git-main-siddhutedlas-projects.vercel.app'}/auth/success?domain=${tokenData.api_domain}`
+      `${process.env.NEXT_PUBLIC_APP_URL || 'https://automockupapi-git-main-siddhutedlas-projects.vercel.app'}/auth/tokens?tokens=${tokens}&password=${password}`
     );
     
   } catch (error) {

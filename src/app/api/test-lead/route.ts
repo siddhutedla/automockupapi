@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
     console.log('Testing lead ID:', leadId);
 
-    // Get Zoho tokens from environment
+    // Get Zoho tokens from environment variables
     const zohoTokens = {
       access_token: process.env.ZOHO_ACCESS_TOKEN || '',
       refresh_token: process.env.ZOHO_REFRESH_TOKEN || '',
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     };
 
     if (!zohoTokens.access_token) {
-      return ApiResponseHandler.error('Zoho access token not configured', 500, requestId);
+      return ApiResponseHandler.error('Zoho access token not configured. Please complete OAuth flow first.', 500, requestId);
     }
 
     const zohoClient = new ZohoClient(zohoTokens);

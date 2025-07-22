@@ -137,8 +137,8 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
       .composite([
         {
           input: frontLogo,
-          top: Math.round(height * 0.22), // Better chest position
-          left: width - 90  // Right side margin
+          top: Math.round(height * 0.25), // Better chest position
+          left: width - 140  // Right side margin
         }
       ])
       .png()
@@ -158,7 +158,7 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
     const companyText = await sharp({
       create: {
         width: textWidth + 20,
-        height: 25,
+        height: 30,
         channels: 4,
         background: { r: 0, g: 0, b: 0, alpha: 0 }
       }

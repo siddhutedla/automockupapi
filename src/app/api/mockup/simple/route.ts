@@ -153,41 +153,12 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
       .png()
       .toBuffer();
     
-    // Create company name text for back mockup - using a different approach
-    const textWidth = companyName.length * 12; // Approximate width
-    const companyText = await sharp({
-      create: {
-        width: textWidth + 20,
-        height: 30,
-        channels: 4,
-        background: { r: 0, g: 0, b: 0, alpha: 0 }
-      }
-    })
-    .composite([
-      {
-        input: Buffer.from(`
-          <svg width="${textWidth + 20}" height="25">
-            <text x="10" y="18" font-family="Arial, sans-serif" font-size="16" fill="black" text-anchor="middle">${companyName}</text>
-          </svg>
-        `),
-        top: 0,
-        left: 0
-      }
-    ])
-    .png()
-    .toBuffer();
-    
     const backMockup = await sharp(backShirtTemplate)
       .composite([
         {
           input: backLogo,
-          top: Math.round(height * 0.25), // Center vertically
+          top: Math.round(height * 0.22), // Center vertically
           left: Math.round((width - 100) / 2)  // Center horizontally
-        },
-        {
-          input: companyText,
-          top: Math.round(height * 0.42), // Closer to logo
-          left: Math.round((width - (textWidth + 20)) / 2)  // Center horizontally based on actual text width
         }
       ])
       .png()

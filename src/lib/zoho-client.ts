@@ -218,6 +218,9 @@ export class ZohoClient {
   async getLead(leadId: string): Promise<Record<string, unknown>> {
     await this.refreshTokenIfNeeded();
 
+    console.log('🔍 [ZOHO-CLIENT] Fetching lead:', leadId);
+    console.log('🔍 [ZOHO-CLIENT] Base URL:', this.baseUrl);
+
     const response = await fetch(`${this.baseUrl}/crm/v3/Leads/${leadId}`, {
       headers: {
         'Authorization': `Zoho-oauthtoken ${this.tokens!.access_token}`,
@@ -225,16 +228,37 @@ export class ZohoClient {
       },
     });
 
+    console.log('🔍 [ZOHO-CLIENT] Lead API response status:', response.status);
+    console.log('🔍 [ZOHO-CLIENT] Lead API response headers:', Object.fromEntries(response.headers.entries()));
+
     if (!response.ok) {
-      throw new Error('Failed to fetch lead');
+      const errorText = await response.text();
+      console.error('❌ [ZOHO-CLIENT] Failed to fetch lead:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText: errorText
+      });
+      throw new Error(`Failed to fetch lead: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    return data.data?.[0] || {};
+    console.log('🔍 [ZOHO-CLIENT] Lead API response data:', data);
+    
+    const result = data.data?.[0] || {};
+    console.log('🔍 [ZOHO-CLIENT] Processed lead data:', {
+      hasData: !!result,
+      keys: Object.keys(result),
+      hasImageLogo: !!result['Image_Logo']
+    });
+    
+    return result;
   }
 
   async downloadCustomFile(fileUrl: string): Promise<Buffer> {
     await this.refreshTokenIfNeeded();
+
+    console.log('🔍 [ZOHO-CLIENT] Downloading custom file from URL:', fileUrl);
+    console.log('🔍 [ZOHO-CLIENT] Full download URL:', `${this.baseUrl}${fileUrl}`);
 
     const response = await fetch(`${this.baseUrl}${fileUrl}`, {
       headers: {
@@ -243,11 +267,25 @@ export class ZohoClient {
       },
     });
 
+    console.log('🔍 [ZOHO-CLIENT] File download response status:', response.status);
+    console.log('🔍 [ZOHO-CLIENT] File download response headers:', Object.fromEntries(response.headers.entries()));
+
     if (!response.ok) {
-      throw new Error('Failed to download custom file');
+      const errorText = await response.text();
+      console.error('❌ [ZOHO-CLIENT] Failed to download custom file:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText: errorText,
+        fileUrl: fileUrl
+      });
+      throw new Error(`Failed to download custom file: ${response.status} ${response.statusText}`);
     }
 
     const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
+    const buffer = Buffer.from(arrayBuffer);
+    
+    console.log('🔍 [ZOHO-CLIENT] File downloaded successfully, size:', buffer.length, 'bytes');
+    
+    return buffer;
   }
 } 

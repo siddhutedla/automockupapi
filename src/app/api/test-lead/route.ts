@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   
   try {
     const { searchParams } = new URL(request.url);
-    const leadId = searchParams.get('leadId') || '6764494000001367196';
+    const leadId = searchParams.get('leadId') || '6764494000001367215';
 
     console.log('Testing lead ID:', leadId);
 

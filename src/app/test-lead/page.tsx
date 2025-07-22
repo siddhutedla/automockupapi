@@ -32,7 +32,7 @@ export default function TestLeadPage() {
     setResult(null);
 
     try {
-      const response = await fetch('/api/test-lead?leadId=6764494000001367196');
+      const response = await fetch('/api/test-lead?leadId=6764494000001367215');
       const data = await response.json();
 
       if (data.success) {
@@ -53,7 +53,7 @@ export default function TestLeadPage() {
         <div className="text-center mb-6">
           <TestTube className="h-12 w-12 text-blue-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900">Test Lead ID Functionality</h1>
-          <p className="text-gray-600 mt-2">Testing lead ID: 6764494000001367196</p>
+          <p className="text-gray-600 mt-2">Testing lead ID: 6764494000001367215</p>
         </div>
 
         <div className="space-y-4">
@@ -172,7 +172,7 @@ export default function TestLeadPage() {
         <div className="mt-8 pt-6 border-t border-gray-200">
           <h3 className="text-sm font-medium text-gray-900 mb-2">What this test does:</h3>
           <ol className="text-xs text-gray-600 space-y-1">
-            <li>1. Fetches the lead with ID: 6764494000001367196</li>
+            <li>1. Fetches the lead with ID: 6764494000001367215</li>
             <li>2. Lists all attachments for the lead</li>
             <li>3. Finds the first image attachment (logo)</li>
             <li>4. Downloads and displays the image</li>

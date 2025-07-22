@@ -49,6 +49,27 @@ export default function TestSimpleMockupPage() {
     }
   };
 
+  const testMockupGeneration = async () => {
+    setIsLoading(true);
+    setError('');
+    setResult(null);
+
+    try {
+      const response = await fetch('/api/test-mockup');
+      const data = await response.json();
+
+      if (data.success) {
+        setResult(data.data);
+      } else {
+        setError(data.error || 'Failed to test mockup generation');
+      }
+    } catch {
+      setError('Network error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const downloadMockup = (base64: string, type: string) => {
     const link = document.createElement('a');
     link.href = base64;
@@ -95,23 +116,43 @@ export default function TestSimpleMockupPage() {
             </div>
           </div>
 
-          <button
-            onClick={testSimpleMockup}
-            disabled={isLoading}
-            className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Generating Mockups...
-              </>
-            ) : (
-              <>
-                <TestTube className="h-4 w-4 mr-2" />
-                Generate T-Shirt Mockups
-              </>
-            )}
-          </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              onClick={testSimpleMockup}
+              disabled={isLoading}
+              className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <TestTube className="h-4 w-4 mr-2" />
+                  Test with Zoho Photo
+                </>
+              )}
+            </button>
+            
+            <button
+              onClick={testMockupGeneration}
+              disabled={isLoading}
+              className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Testing...
+                </>
+              ) : (
+                <>
+                  <TestTube className="h-4 w-4 mr-2" />
+                  Test Mockup Generation
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {error && (

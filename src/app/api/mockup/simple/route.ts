@@ -1,10 +1,9 @@
 import { NextRequest } from 'next/server';
 import { ApiResponseHandler, generateRequestId, validateRequiredFields } from '@/lib/api-response';
 import { ZohoClient } from '@/lib/zoho-client';
-import { MockupGenerator } from '@/lib/mockup-generator';
+import sharp from 'sharp';
 import { join } from 'path';
-import { writeFile as writeFileAsync } from 'fs/promises';
-import { readFile } from 'fs/promises';
+import { writeFile as writeFileAsync, readFile } from 'fs/promises';
 
 interface SimpleMockupRequest {
   company: string;
@@ -112,50 +111,12 @@ export async function POST(request: NextRequest) {
     
     console.log('Logo downloaded from Zoho CRM lead photo:', filename);
     
-    // Create mockup generator instance
-    const generator = new MockupGenerator();
+    // Simple mockup generation - directly place logo on t-shirt templates
+    const mockups = await generateSimpleMockups(logoPath, body.company);
     
-    // Generate t-shirt front and back mockups
-    const mockupTypes: ('tshirt-front' | 'tshirt-back')[] = ['tshirt-front', 'tshirt-back'];
-    const results = await generator.generateAllMockups({
-      logoPath,
-      industry: 'other', // Default industry
-      mockupTypes,
-      companyName: body.company,
-      logoPosition: 'center'
-    });
-
-    // Check if all mockups were generated successfully
-    const failedResults = results.filter(result => !result.success);
-    if (failedResults.length > 0) {
-      const errorMessages = failedResults.map(r => r.error).join(', ');
-      return ApiResponseHandler.error(
-        `Failed to generate some mockups: ${errorMessages}`,
-        500,
-        requestId
-      );
-    }
-
-    // Convert mockups to base64
-    const mockupsWithBase64 = await Promise.all(
-      results.map(async (result, index) => {
-        const mockupType = mockupTypes[index] as 'tshirt-front' | 'tshirt-back';
-        const filePath = join(process.cwd(), 'public', result.outputPath!);
-        
-        // Read the file and convert to base64
-        const fileBuffer = await readFile(filePath);
-        const base64 = fileBuffer.toString('base64');
-        
-        return {
-          type: mockupType,
-          base64: `data:image/png;base64,${base64}`
-        };
-      })
-    );
-
     const response: SimpleMockupResponse = {
       success: true,
-      mockups: mockupsWithBase64
+      mockups
     };
 
     return ApiResponseHandler.success(
@@ -167,5 +128,91 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Simple mockup generation error:', error);
     return ApiResponseHandler.serverError('Mockup generation failed', requestId);
+  }
+}
+
+async function generateSimpleMockups(logoPath: string, companyName: string) {
+  console.log('🎨 [SIMPLE-MOCKUP] Starting mockup generation...');
+  console.log('🎨 [SIMPLE-MOCKUP] Logo path:', logoPath);
+  console.log('🎨 [SIMPLE-MOCKUP] Company name:', companyName);
+  
+  const mockups = [];
+  
+  // T-shirt templates
+  const frontTemplate = join(process.cwd(), 'public', 'whiteshirtfront.jpg');
+  const backTemplate = join(process.cwd(), 'public', 'whitetshirtback.jpg');
+  
+  console.log('🎨 [SIMPLE-MOCKUP] Template paths:', { frontTemplate, backTemplate });
+  
+  // Check if templates exist
+  const fs = await import('fs/promises');
+  try {
+    await fs.access(frontTemplate);
+    await fs.access(backTemplate);
+    console.log('✅ [SIMPLE-MOCKUP] Template files found');
+  } catch (error) {
+    console.error('❌ [SIMPLE-MOCKUP] Template files not found:', error);
+    throw new Error('T-shirt templates not found. Please ensure whiteshirtfront.jpg and whitetshirtback.jpg exist in the public directory.');
+  }
+  
+  try {
+    // Process logo for placement
+    console.log('🎨 [SIMPLE-MOCKUP] Processing logo...');
+    const processedLogo = await sharp(logoPath)
+      .resize(200, 200, { fit: 'inside', withoutEnlargement: true })
+      .png()
+      .toBuffer();
+    
+    console.log('✅ [SIMPLE-MOCKUP] Logo processed, size:', processedLogo.length, 'bytes');
+    
+    // Generate front mockup
+    console.log('🎨 [SIMPLE-MOCKUP] Generating front mockup...');
+    const frontMockup = await sharp(frontTemplate)
+      .resize(800, 1000, { fit: 'inside', withoutEnlargement: true })
+      .composite([
+        {
+          input: processedLogo,
+          top: 300, // Center vertically
+          left: 300  // Center horizontally
+        }
+      ])
+      .png()
+      .toBuffer();
+    
+    console.log('✅ [SIMPLE-MOCKUP] Front mockup generated, size:', frontMockup.length, 'bytes');
+    
+    // Generate back mockup
+    console.log('🎨 [SIMPLE-MOCKUP] Generating back mockup...');
+    const backMockup = await sharp(backTemplate)
+      .resize(800, 1000, { fit: 'inside', withoutEnlargement: true })
+      .composite([
+        {
+          input: processedLogo,
+          top: 300, // Center vertically
+          left: 300  // Center horizontally
+        }
+      ])
+      .png()
+      .toBuffer();
+    
+    console.log('✅ [SIMPLE-MOCKUP] Back mockup generated, size:', backMockup.length, 'bytes');
+    
+    // Convert to base64
+    const frontBase64 = `data:image/png;base64,${frontMockup.toString('base64')}`;
+    const backBase64 = `data:image/png;base64,${backMockup.toString('base64')}`;
+    
+    console.log('✅ [SIMPLE-MOCKUP] Base64 conversion completed');
+    
+    mockups.push(
+      { type: 'tshirt-front' as const, base64: frontBase64 },
+      { type: 'tshirt-back' as const, base64: backBase64 }
+    );
+    
+    console.log('✅ [SIMPLE-MOCKUP] Mockup generation completed successfully');
+    return mockups;
+    
+  } catch (error) {
+    console.error('❌ [SIMPLE-MOCKUP] Error during mockup generation:', error);
+    throw new Error(`Mockup generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 } 

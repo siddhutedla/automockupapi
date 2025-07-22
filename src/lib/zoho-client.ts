@@ -14,13 +14,19 @@ export class ZohoClient {
   constructor(tokens?: ZohoToken) {
     if (tokens) {
       this.tokens = tokens;
-      this.baseUrl = `https://${tokens.api_domain}`;
+      this.baseUrl = this.buildBaseUrl(tokens.api_domain);
     }
   }
 
   setTokens(tokens: ZohoToken) {
     this.tokens = tokens;
-    this.baseUrl = `https://${tokens.api_domain}`;
+    this.baseUrl = this.buildBaseUrl(tokens.api_domain);
+  }
+
+  private buildBaseUrl(apiDomain: string): string {
+    // Remove any existing protocol to avoid double https://
+    const cleanDomain = apiDomain.replace(/^https?:\/\//, '');
+    return `https://${cleanDomain}`;
   }
 
   private async refreshTokenIfNeeded(): Promise<void> {

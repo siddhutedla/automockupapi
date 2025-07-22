@@ -37,18 +37,49 @@ export async function POST(request: NextRequest) {
       return ApiResponseHandler.validationError(validationErrors, requestId);
     }
 
-    // Get Zoho tokens from environment
-    const zohoTokens = {
-      access_token: process.env.ZOHO_ACCESS_TOKEN || '',
-      refresh_token: process.env.ZOHO_REFRESH_TOKEN || '',
-      expires_in: 3600,
-      api_domain: process.env.ZOHO_API_DOMAIN || 'www.zohoapis.com',
-      token_type: 'Bearer',
-      expires_at: Date.now() + 3600000
-    };
+    // Get Zoho tokens using token refresh service
+    let zohoTokens;
+    try {
+      const { TokenRefreshService } = await import('@/lib/token-refresh');
+      
+      // Check if we have the required environment variables
+      const clientId = process.env.ZOHO_CLIENT_ID;
+      const clientSecret = process.env.ZOHO_CLIENT_SECRET;
+      const refreshToken = process.env.ZOHO_REFRESH_TOKEN;
+      
+      if (!clientId || !clientSecret || !refreshToken) {
+        console.error('Missing Zoho environment variables:', {
+          hasClientId: !!clientId,
+          hasClientSecret: !!clientSecret,
+          hasRefreshToken: !!refreshToken
+        });
+        return ApiResponseHandler.error(
+          'Zoho configuration incomplete. Please check ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET, and ZOHO_REFRESH_TOKEN environment variables.',
+          500,
+          requestId
+        );
+      }
 
-    if (!zohoTokens.access_token) {
-      return ApiResponseHandler.error('Zoho access token not configured', 500, requestId);
+      // Refresh the access token
+      const tokenData = await TokenRefreshService.refreshAccessToken();
+      
+      zohoTokens = {
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token,
+        expires_in: tokenData.expires_in,
+        api_domain: tokenData.api_domain,
+        token_type: tokenData.token_type,
+        expires_at: TokenRefreshService.calculateExpiryTime(tokenData.expires_in)
+      };
+
+      console.log('✅ [SIMPLE-MOCKUP] Zoho tokens configured successfully');
+    } catch (error) {
+      console.error('❌ [SIMPLE-MOCKUP] Failed to configure Zoho tokens:', error);
+      return ApiResponseHandler.error(
+        `Failed to configure Zoho tokens: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        500,
+        requestId
+      );
     }
 
     const zohoClient = new ZohoClient(zohoTokens);

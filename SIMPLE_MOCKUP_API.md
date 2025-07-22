@@ -144,6 +144,28 @@ You can test this API using the test page at `/test-simple-mockup` which provide
 
 ## Requirements
 
-- Zoho CRM access tokens must be configured in environment variables
+- Zoho CRM must be properly configured with environment variables
 - The Lead ID must exist in Zoho CRM
-- The Lead must have a photo/logo attached 
+- The Lead must have a photo/logo attached
+
+### Zoho Configuration
+
+The API requires the following environment variables to be set:
+
+```bash
+ZOHO_CLIENT_ID=your_client_id_here
+ZOHO_CLIENT_SECRET=your_client_secret_here
+ZOHO_REFRESH_TOKEN=your_refresh_token_here
+ZOHO_API_DOMAIN=www.zohoapis.com
+```
+
+You can check your Zoho configuration status by visiting `/zoho-status` in your browser.
+
+### Setting up Zoho OAuth
+
+1. Go to [Zoho Developer Console](https://api-console.zoho.com/)
+2. Create a new OAuth application
+3. Set the redirect URI to `https://your-domain.com/oauth/callback`
+4. Get your Client ID and Client Secret
+5. Generate a refresh token using the OAuth flow
+6. Add these values to your `.env.local` file 

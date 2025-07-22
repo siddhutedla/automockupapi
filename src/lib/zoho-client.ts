@@ -196,4 +196,57 @@ export class ZohoClient {
 
     return await response.json();
   }
+
+  async getLeadAttachments(leadId: string): Promise<Record<string, unknown>[]> {
+    await this.refreshTokenIfNeeded();
+
+    const response = await fetch(`${this.baseUrl}/crm/v3/Leads/${leadId}/Attachments`, {
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${this.tokens!.access_token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch lead attachments');
+    }
+
+    const data = await response.json();
+    return data.data || [];
+  }
+
+  async getLead(leadId: string): Promise<Record<string, unknown>> {
+    await this.refreshTokenIfNeeded();
+
+    const response = await fetch(`${this.baseUrl}/crm/v3/Leads/${leadId}`, {
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${this.tokens!.access_token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch lead');
+    }
+
+    const data = await response.json();
+    return data.data?.[0] || {};
+  }
+
+  async downloadAttachment(attachmentId: string): Promise<Buffer> {
+    await this.refreshTokenIfNeeded();
+
+    const response = await fetch(`${this.baseUrl}/crm/v3/Leads/Attachments/${attachmentId}`, {
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${this.tokens!.access_token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to download attachment');
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
 } 

@@ -31,6 +31,7 @@ export default function Home() {
           tagline: formData.tagline,
           mockupTypes: formData.mockupTypes,
           logoPosition: formData.logoPosition || 'center',
+          leadID: formData.leadID || undefined,
         }),
       });
 

@@ -28,7 +28,8 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
     companyName: '',
     tagline: '',
     mockupTypes: [],
-    logoPosition: 'center' as LogoPosition
+    logoPosition: 'center' as LogoPosition,
+    leadID: ''
   });
 
   useEffect(() => {
@@ -121,8 +122,9 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.logo) {
-      setUploadError('Please upload a logo');
+    // Check if either logo is uploaded or leadID is provided
+    if (!formData.logo && !formData.leadID?.trim()) {
+      setUploadError('Please either upload a logo or provide a Zoho CRM Lead ID');
       return;
     }
 
@@ -167,6 +169,23 @@ export default function MockupForm({ onSubmit, isLoading = false, onChange, onIm
           onImageRemove={handleImageRemove}
           currentImage={uploadedImageUrl}
         />
+      </div>
+
+      {/* Zoho CRM Lead ID */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Zoho CRM Lead ID (Optional)
+        </label>
+        <input
+          type="text"
+          value={formData.leadID}
+          onChange={(e) => setFormData(prev => ({ ...prev, leadID: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Enter Zoho CRM Lead ID to fetch logo from custom field"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          If provided, the logo will be fetched from the lead&apos;s &quot;Image Logo&quot; custom field instead of uploading
+        </p>
       </div>
 
       {/* Company Information */}

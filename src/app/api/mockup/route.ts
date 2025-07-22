@@ -2,7 +2,9 @@ import { NextRequest } from 'next/server';
 import { MockupRequest, MockupResponse } from '@/types';
 import { MockupGenerator } from '@/lib/mockup-generator';
 import { ApiResponseHandler, generateRequestId, validateRequiredFields } from '@/lib/api-response';
+import { ZohoClient } from '@/lib/zoho-client';
 import { join } from 'path';
+import { writeFile as writeFileAsync } from 'fs/promises';
 
 export async function POST(request: NextRequest) {
   const requestId = generateRequestId();
@@ -12,13 +14,18 @@ export async function POST(request: NextRequest) {
     
     console.log('Mockup API received:', body);
     
-    // Validate required fields
-    const requiredFields = ['logoUrl', 'industry', 'companyName', 'mockupTypes'];
+    // Validate required fields - either logoUrl or leadID must be provided
+    const requiredFields = ['industry', 'companyName', 'mockupTypes'];
     const validationErrors = validateRequiredFields(body as unknown, requiredFields);
     
     if (validationErrors.length > 0) {
       console.log('Validation errors:', validationErrors);
       return ApiResponseHandler.validationError(validationErrors, requestId);
+    }
+
+    // Check if either logoUrl or leadID is provided
+    if (!body.logoUrl && !body.leadID) {
+      return ApiResponseHandler.error('Either logoUrl or leadID must be provided', 400, requestId);
     }
 
     // Validate mockup types array
@@ -56,15 +63,75 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert logo URL to file path
-    const logoPath = join(process.cwd(), 'public', body.logoUrl);
-    
-    // Check if logo file exists
-    const fs = await import('fs/promises');
-    try {
-      await fs.access(logoPath);
-    } catch {
-      return ApiResponseHandler.notFound('Logo file not found', requestId);
+    let logoPath: string;
+
+    // Handle logo from Zoho CRM lead custom field
+    if (body.leadID) {
+      try {
+        // Get Zoho tokens from environment or session
+        const zohoTokens = {
+          access_token: process.env.ZOHO_ACCESS_TOKEN || '',
+          refresh_token: process.env.ZOHO_REFRESH_TOKEN || '',
+          expires_in: 3600,
+          api_domain: process.env.ZOHO_API_DOMAIN || 'www.zohoapis.com',
+          token_type: 'Bearer',
+          expires_at: Date.now() + 3600000
+        };
+
+        const zohoClient = new ZohoClient(zohoTokens);
+        
+        // Fetch the lead to get the custom "Image Logo" field
+        const lead = await zohoClient.getLead(body.leadID);
+        
+        if (!lead || !lead['Image_Logo']) {
+          return ApiResponseHandler.error('No "Image Logo" field found for the specified lead', 404, requestId);
+        }
+
+        // The Image_Logo field should contain a URL to the image
+        const logoUrl = lead['Image_Logo'] as string;
+        
+        if (!logoUrl) {
+          return ApiResponseHandler.error('"Image Logo" field is empty for the specified lead', 404, requestId);
+        }
+
+        // Download the image from the URL
+        const imageResponse = await fetch(logoUrl);
+        
+        if (!imageResponse.ok) {
+          return ApiResponseHandler.error('Failed to download image from "Image Logo" field', 404, requestId);
+        }
+
+        const imageBuffer = await imageResponse.arrayBuffer();
+        
+        // Save to uploads directory
+        const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substring(2, 15);
+        // Try to determine file extension from URL or default to png
+        const urlParts = logoUrl.split('.');
+        const fileExtension = urlParts.length > 1 ? urlParts[urlParts.length - 1].split('?')[0] : 'png';
+        const filename = `zoho-logo-${timestamp}-${randomString}.${fileExtension}`;
+        const uploadsDir = join(process.cwd(), 'public', 'uploads');
+        logoPath = join(uploadsDir, filename);
+        
+        await writeFileAsync(logoPath, Buffer.from(imageBuffer));
+        
+        console.log('Logo downloaded from Zoho CRM "Image Logo" field:', filename);
+        
+      } catch (error) {
+        console.error('Error fetching logo from Zoho CRM:', error);
+        return ApiResponseHandler.error('Failed to fetch logo from Zoho CRM "Image Logo" field', 500, requestId);
+      }
+    } else {
+      // Use provided logoUrl
+      logoPath = join(process.cwd(), 'public', body.logoUrl!);
+      
+      // Check if logo file exists
+      const fs = await import('fs/promises');
+      try {
+        await fs.access(logoPath);
+      } catch {
+        return ApiResponseHandler.notFound('Logo file not found', requestId);
+      }
     }
     
     // Create mockup generator instance

@@ -39,6 +39,7 @@ export interface MockupFormData {
   tagline?: string;
   mockupTypes: MockupType[];
   logoPosition?: LogoPosition;
+  leadID?: string;
 }
 
 export interface MockupRequest {
@@ -48,6 +49,7 @@ export interface MockupRequest {
   tagline?: string;
   mockupTypes: MockupType[];
   logoPosition?: LogoPosition;
+  leadID?: string;
 }
 
 export interface MockupResponse {

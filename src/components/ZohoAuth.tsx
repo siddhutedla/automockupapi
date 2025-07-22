@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Zap, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 interface AuthData {
@@ -44,7 +44,7 @@ export default function ZohoAuth({ onAuthSuccess, onAuthError }: ZohoAuthProps) 
     }
   };
 
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = useCallback(async () => {
     try {
       const response = await fetch('/api/auth/zoho/status');
       const result = await response.json();
@@ -54,10 +54,10 @@ export default function ZohoAuth({ onAuthSuccess, onAuthError }: ZohoAuthProps) 
         setAuthData(result.data);
         onAuthSuccess?.(result.data);
       }
-    } catch (error) {
+    } catch {
       // Ignore status check errors
     }
-  };
+  }, [onAuthSuccess]);
 
   useEffect(() => {
     // Check if we're returning from OAuth callback
@@ -73,7 +73,7 @@ export default function ZohoAuth({ onAuthSuccess, onAuthError }: ZohoAuthProps) 
       setErrorMessage(authError);
       onAuthError?.(authError);
     }
-  }, [onAuthError]);
+  }, [onAuthError, checkAuthStatus]);
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6">

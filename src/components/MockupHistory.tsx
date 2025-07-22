@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MockupResponse, MockupType } from '@/types';
 import { Download, Eye, Filter } from 'lucide-react';
 
@@ -29,7 +29,7 @@ export default function MockupHistory({ onSelectMockup }: MockupHistoryProps) {
     mockupType: ''
   });
 
-  const fetchHistory = async (pageNum: number = 1, reset: boolean = false) => {
+  const fetchHistory = useCallback(async (pageNum: number = 1, reset: boolean = false) => {
     setLoading(true);
     setError('');
 
@@ -64,7 +64,7 @@ export default function MockupHistory({ onSelectMockup }: MockupHistoryProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
 
   useEffect(() => {
     setMounted(true);

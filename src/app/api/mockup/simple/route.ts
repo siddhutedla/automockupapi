@@ -126,14 +126,19 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
       .png()
       .toBuffer();
     
-    // Generate front mockup - logo on left chest
+    // Generate front mockup - logo on left chest, smaller size
     console.log('🎨 [SIMPLE-MOCKUP] Generating front mockup...');
+    const frontLogo = await sharp(logoBuffer)
+      .resize(80, 80, { fit: 'inside', withoutEnlargement: true }) // Smaller for left chest
+      .png()
+      .toBuffer();
+    
     const frontMockup = await sharp(frontShirtTemplate)
       .composite([
         {
-          input: processedLogo,
+          input: frontLogo,
           top: Math.round(height * 0.25), // Left chest position
-          left: 50  // Left side margin
+          left: 80  // Better left side margin
         }
       ])
       .png()
@@ -141,19 +146,47 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
     
     console.log('✅ [SIMPLE-MOCKUP] Front mockup generated, size:', frontMockup.length, 'bytes');
     
-    // Generate back mockup - logo in middle, slightly bigger
+    // Generate back mockup - logo in middle, slightly bigger with company name
     console.log('🎨 [SIMPLE-MOCKUP] Generating back mockup...');
     const backLogo = await sharp(logoBuffer)
-      .resize(156, 156, { fit: 'inside', withoutEnlargement: true }) // 30% bigger (120 * 1.3)
+      .resize(130, 130, { fit: 'inside', withoutEnlargement: true }) // Slightly bigger but not too big
       .png()
       .toBuffer();
+    
+    // Create company name text for back mockup
+    const companyText = await sharp({
+      create: {
+        width: 400,
+        height: 40,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
+      }
+    })
+    .composite([
+      {
+        input: Buffer.from(`
+          <svg width="400" height="40">
+            <text x="0" y="28" font-family="Arial, sans-serif" font-size="20" fill="rgb(0,0,0)" font-weight="bold">${companyName}</text>
+          </svg>
+        `),
+        top: 0,
+        left: 0
+      }
+    ])
+    .png()
+    .toBuffer();
     
     const backMockup = await sharp(backShirtTemplate)
       .composite([
         {
           input: backLogo,
           top: Math.round(height * 0.25), // Center vertically
-          left: Math.round((width - 156) / 2)  // Center horizontally
+          left: Math.round((width - 130) / 2)  // Center horizontally
+        },
+        {
+          input: companyText,
+          top: Math.round(height * 0.45), // Below the logo
+          left: Math.round((width - 400) / 2)  // Center horizontally
         }
       ])
       .png()

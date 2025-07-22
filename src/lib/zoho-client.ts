@@ -66,7 +66,7 @@ export class ZohoClient {
     };
   }
 
-  async getContacts(limit: number = 200): Promise<any[]> {
+  async getContacts(limit: number = 200): Promise<Record<string, unknown>[]> {
     await this.refreshTokenIfNeeded();
 
     const response = await fetch(`${this.baseUrl}/crm/v3/Contacts?per_page=${limit}`, {
@@ -84,7 +84,7 @@ export class ZohoClient {
     return data.data || [];
   }
 
-  async getLeads(limit: number = 200): Promise<any[]> {
+  async getLeads(limit: number = 200): Promise<Record<string, unknown>[]> {
     await this.refreshTokenIfNeeded();
 
     const response = await fetch(`${this.baseUrl}/crm/v3/Leads?per_page=${limit}`, {
@@ -102,7 +102,7 @@ export class ZohoClient {
     return data.data || [];
   }
 
-  async getAccounts(limit: number = 200): Promise<any[]> {
+  async getAccounts(limit: number = 200): Promise<Record<string, unknown>[]> {
     await this.refreshTokenIfNeeded();
 
     const response = await fetch(`${this.baseUrl}/crm/v3/Accounts?per_page=${limit}`, {
@@ -120,7 +120,7 @@ export class ZohoClient {
     return data.data || [];
   }
 
-  async createContact(contactData: any): Promise<any> {
+  async createContact(contactData: Record<string, unknown>): Promise<Record<string, unknown>> {
     await this.refreshTokenIfNeeded();
 
     const response = await fetch(`${this.baseUrl}/crm/v3/Contacts`, {
@@ -141,7 +141,7 @@ export class ZohoClient {
     return await response.json();
   }
 
-  async updateContact(contactId: string, contactData: any): Promise<any> {
+  async updateContact(contactId: string, contactData: Record<string, unknown>): Promise<Record<string, unknown>> {
     await this.refreshTokenIfNeeded();
 
     const response = await fetch(`${this.baseUrl}/crm/v3/Contacts/${contactId}`, {
@@ -162,7 +162,7 @@ export class ZohoClient {
     return await response.json();
   }
 
-  async getModules(): Promise<any[]> {
+  async getModules(): Promise<Record<string, unknown>[]> {
     await this.refreshTokenIfNeeded();
 
     const response = await fetch(`${this.baseUrl}/crm/v3/settings/modules`, {
@@ -180,7 +180,7 @@ export class ZohoClient {
     return data.modules || [];
   }
 
-  async getUserInfo(): Promise<any> {
+  async getUserInfo(): Promise<Record<string, unknown>> {
     await this.refreshTokenIfNeeded();
 
     const response = await fetch(`${this.baseUrl}/crm/v3/users`, {

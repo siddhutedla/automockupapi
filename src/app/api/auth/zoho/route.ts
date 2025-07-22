@@ -19,13 +19,12 @@ export async function GET() {
     authUrl.searchParams.set('access_type', 'offline');
     authUrl.searchParams.set('prompt', 'consent');
     
-    // Generate state parameter for security
-    const state = 'oauth_state_' + Date.now();
+    // Generate state parameter for security (not used in this implementation)
+    // const state = 'oauth_state_' + Date.now();
     
     return ApiResponseHandler.success(
       {
         authUrl: authUrl.toString(),
-        state,
         clientId: ZOHO_CLIENT_ID,
         redirectUri: ZOHO_REDIRECT_URI
       },

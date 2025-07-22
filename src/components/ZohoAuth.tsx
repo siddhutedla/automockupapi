@@ -3,8 +3,13 @@
 import { useState, useEffect } from 'react';
 import { Zap, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
+interface AuthData {
+  apiDomain?: string;
+  expiresIn?: number;
+}
+
 interface ZohoAuthProps {
-  onAuthSuccess?: (data: any) => void;
+  onAuthSuccess?: (data: AuthData) => void;
   onAuthError?: (error: string) => void;
 }
 
@@ -12,7 +17,7 @@ export default function ZohoAuth({ onAuthSuccess, onAuthError }: ZohoAuthProps) 
   const [isLoading, setIsLoading] = useState(false);
   const [authStatus, setAuthStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
-  const [authData, setAuthData] = useState<any>(null);
+  const [authData, setAuthData] = useState<AuthData | null>(null);
 
   const initiateOAuth = async () => {
     setIsLoading(true);
@@ -123,7 +128,7 @@ export default function ZohoAuth({ onAuthSuccess, onAuthError }: ZohoAuthProps) 
                 API Domain: {authData.apiDomain}
               </p>
               <p className="text-sm text-green-700">
-                Expires in: {Math.round(authData.expiresIn / 60)} minutes
+                Expires in: {authData.expiresIn ? Math.round(authData.expiresIn / 60) : 0} minutes
               </p>
             </div>
           )}

@@ -6,12 +6,9 @@ import { TestTube, CheckCircle, AlertCircle } from 'lucide-react';
 interface TestResult {
   leadId: string;
   leadFound: boolean;
-  hasImageLogoField: boolean;
-  imageLogoField: unknown;
-  downloadTest: {
+  photoTest: {
     success: boolean;
-    fileUrl?: string;
-    fileName?: string;
+    leadId?: string;
     fileSize?: number;
     message?: string;
     error?: string;
@@ -93,48 +90,36 @@ export default function TestLeadPage() {
                 <div className="space-y-2 text-sm">
                   <div><strong>Lead ID:</strong> {result.leadId}</div>
                   <div><strong>Lead Found:</strong> {result.leadFound ? 'Yes' : 'No'}</div>
-                  <div><strong>Has Image Logo Field:</strong> {result.hasImageLogoField ? 'Yes' : 'No'}</div>
                 </div>
               </div>
 
-              {result.downloadTest && (
+              {result.photoTest && (
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-900 mb-2">Download Test:</h3>
+                  <h3 className="text-sm font-medium text-gray-900 mb-2">Photo Test:</h3>
                   <div className="space-y-2 text-sm">
-                    <div><strong>Status:</strong> {result.downloadTest.success ? 'Success' : 'Failed'}</div>
-                    {result.downloadTest.success ? (
+                    <div><strong>Status:</strong> {result.photoTest.success ? 'Success' : 'Failed'}</div>
+                    {result.photoTest.success ? (
                       <>
-                        <div><strong>File Name:</strong> {result.downloadTest.fileName}</div>
-                        <div><strong>File Size:</strong> {result.downloadTest.fileSize} bytes</div>
-                        <div><strong>Message:</strong> {result.downloadTest.message}</div>
-                        {result.downloadTest.fileUrl && (
-                          <div className="mt-4">
-                            <strong>Downloaded Image:</strong>
-                            <div className="mt-2">
-                              <img 
-                                src={`/api/test-lead/image?fileUrl=${encodeURIComponent(result.downloadTest.fileUrl)}`}
-                                alt="Downloaded Image_Logo"
-                                className="max-w-full h-auto max-h-64 border border-gray-300 rounded"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                }}
-                              />
-                            </div>
+                        <div><strong>Lead ID:</strong> {result.photoTest.leadId}</div>
+                        <div><strong>File Size:</strong> {result.photoTest.fileSize} bytes</div>
+                        <div><strong>Message:</strong> {result.photoTest.message}</div>
+                        <div className="mt-4">
+                          <strong>Downloaded Photo:</strong>
+                          <div className="mt-2">
+                            <img 
+                              src={`/api/test-lead/image?leadId=${encodeURIComponent(result.leadId)}`}
+                              alt="Lead Photo"
+                              className="max-w-full h-auto max-h-64 border border-gray-300 rounded"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
                           </div>
-                        )}
+                        </div>
                       </>
                     ) : (
-                      <div><strong>Error:</strong> {result.downloadTest.error}</div>
+                      <div><strong>Error:</strong> {result.photoTest.error}</div>
                     )}
-                  </div>
-                </div>
-              )}
-
-              {result.imageLogoField !== null && result.imageLogoField !== undefined && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-900 mb-2">Image Logo Field:</h3>
-                  <div className="space-y-2 text-sm">
-                    <div><strong>Field Value:</strong> <pre className="text-xs overflow-auto">{String(JSON.stringify(result.imageLogoField as Record<string, unknown>, null, 2))}</pre></div>
                   </div>
                 </div>
               )}
@@ -163,11 +148,10 @@ export default function TestLeadPage() {
         <div className="mt-8 pt-6 border-t border-gray-200">
           <h3 className="text-sm font-medium text-gray-900 mb-2">What this test does:</h3>
           <ol className="text-xs text-gray-600 space-y-1">
-            <li>1. Fetches the lead with ID: 6764494000001367215</li>
-            <li>2. Lists all attachments for the lead</li>
-            <li>3. Finds the first image attachment (logo)</li>
-            <li>4. Downloads and displays the image</li>
-            <li>5. Shows attachment details and download test results</li>
+            <li>1. Fetches the lead with ID: 3000000038009</li>
+            <li>2. Attempts to download the lead&apos;s photo</li>
+            <li>3. Displays the photo if successful</li>
+            <li>4. Shows photo test results and lead details</li>
           </ol>
         </div>
       </div>

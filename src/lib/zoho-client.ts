@@ -243,15 +243,50 @@ export class ZohoClient {
 
     const data = await response.json();
     console.log('🔍 [ZOHO-CLIENT] Lead API response data:', data);
-    
+
     const result = data.data?.[0] || {};
     console.log('🔍 [ZOHO-CLIENT] Processed lead data:', {
       hasData: !!result,
       keys: Object.keys(result),
-      hasImageLogo: !!result['Image_Logo']
+      leadId: result.id
     });
-    
+
     return result;
+  }
+
+  async downloadLeadPhoto(leadId: string): Promise<Buffer> {
+    await this.refreshTokenIfNeeded();
+
+    console.log('🔍 [ZOHO-CLIENT] Downloading lead photo for lead ID:', leadId);
+    console.log('🔍 [ZOHO-CLIENT] Photo URL:', `${this.baseUrl}/crm/v3/Leads/${leadId}/photo`);
+
+    const response = await fetch(`${this.baseUrl}/crm/v3/Leads/${leadId}/photo`, {
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${this.tokens!.access_token}`,
+        'Accept': 'application/octet-stream',
+      },
+    });
+
+    console.log('🔍 [ZOHO-CLIENT] Photo download response status:', response.status);
+    console.log('🔍 [ZOHO-CLIENT] Photo download response headers:', Object.fromEntries(response.headers.entries()));
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ [ZOHO-CLIENT] Failed to download lead photo:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText: errorText,
+        leadId: leadId
+      });
+      throw new Error(`Failed to download lead photo: ${response.status} ${response.statusText}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    console.log('🔍 [ZOHO-CLIENT] Lead photo downloaded successfully, size:', buffer.length, 'bytes');
+
+    return buffer;
   }
 
   async downloadCustomFile(fileUrl: string): Promise<Buffer> {

@@ -4,13 +4,13 @@ import { ZohoClient } from '@/lib/zoho-client';
 
 export async function GET(request: NextRequest) {
   const requestId = generateRequestId();
-  
+
   try {
     const { searchParams } = new URL(request.url);
-    const fileUrl = searchParams.get('fileUrl');
+    const leadId = searchParams.get('leadId');
 
-    if (!fileUrl) {
-      return ApiResponseHandler.error('Missing fileUrl parameter', 400, requestId);
+    if (!leadId) {
+      return ApiResponseHandler.error('Missing leadId parameter', 400, requestId);
     }
 
     // Get Zoho tokens from environment variables
@@ -28,14 +28,14 @@ export async function GET(request: NextRequest) {
     }
 
     const zohoClient = new ZohoClient(zohoTokens);
-    
-    // Download the custom file
-    const imageBuffer = await zohoClient.downloadCustomFile(fileUrl);
-    
+
+    // Download the lead photo
+    const imageBuffer = await zohoClient.downloadLeadPhoto(leadId);
+
     // Return the image as a response
     return new Response(imageBuffer, {
       headers: {
-        'Content-Type': 'image/png', // Default to PNG, could be determined from attachment metadata
+        'Content-Type': 'image/png', // Default to PNG, could be determined from response headers
         'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
       },
     });

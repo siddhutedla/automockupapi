@@ -78,56 +78,39 @@ export async function POST(request: NextRequest) {
           expires_at: Date.now() + 3600000
         };
 
+        if (!zohoTokens.access_token) {
+          return ApiResponseHandler.error('Zoho access token not configured', 500, requestId);
+        }
+
         const zohoClient = new ZohoClient(zohoTokens);
         
-        // Fetch the lead to get the Image_Logo field
+        // Get lead data
         const lead = await zohoClient.getLead(body.leadID);
         
         if (!lead) {
           return ApiResponseHandler.error('Lead not found', 404, requestId);
         }
 
-        // Check for Image_Logo custom field
-        const imageLogoField = lead['Image_Logo'];
-        
-        if (!imageLogoField) {
-          return ApiResponseHandler.error('No Image_Logo field found for the specified lead', 404, requestId);
+        // Download lead photo
+        let logoBuffer: Buffer;
+        try {
+          logoBuffer = await zohoClient.downloadLeadPhoto(body.leadID);
+        } catch (error) {
+          console.error('Failed to download lead photo:', error);
+          return ApiResponseHandler.error('Failed to download lead photo', 500, requestId);
         }
-
-        // Download the Image_Logo file
-        let fileUrl: string;
-        let fileName: string = 'logo.png';
-        
-        // Handle different response formats
-        if (typeof imageLogoField === 'string') {
-          // Direct URL format
-          fileUrl = imageLogoField;
-        } else if (typeof imageLogoField === 'object' && imageLogoField !== null) {
-          // Object format with link_url
-          const logoObj = imageLogoField as Record<string, unknown>;
-          fileUrl = logoObj.link_url as string || logoObj.download_url as string;
-          fileName = logoObj.name as string || 'logo.png';
-        } else {
-          return ApiResponseHandler.error('Invalid Image_Logo field format', 400, requestId);
-        }
-        
-        if (!fileUrl) {
-          return ApiResponseHandler.error('No file URL found in Image_Logo field', 404, requestId);
-        }
-
-        const imageBuffer = await zohoClient.downloadCustomFile(fileUrl);
         
         // Save to uploads directory
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substring(2, 15);
-        const fileExtension = fileName.split('.').pop() || 'png';
+        const fileExtension = 'png'; // Assuming a default extension for lead photo
         const filename = `zoho-logo-${timestamp}-${randomString}.${fileExtension}`;
         const uploadsDir = join(process.cwd(), 'public', 'uploads');
         logoPath = join(uploadsDir, filename);
         
-        await writeFileAsync(logoPath, imageBuffer);
+        await writeFileAsync(logoPath, logoBuffer);
         
-        console.log('Logo downloaded from Zoho CRM Image_Logo field:', filename);
+                  console.log('Logo downloaded from Zoho CRM lead photo:', filename);
         
       } catch (error) {
         console.error('Error fetching logo from Zoho CRM Image_Logo field:', error);

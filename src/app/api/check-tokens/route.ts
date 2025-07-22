@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { ApiResponseHandler, generateRequestId } from '@/lib/api-response';
 import { TokenRefreshService } from '@/lib/token-refresh';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const requestId = generateRequestId();
   
   console.log('🔍 [CHECK-TOKENS] Checking token status...');

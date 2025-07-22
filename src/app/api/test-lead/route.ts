@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { ApiResponseHandler, generateRequestId } from '@/lib/api-response';
-import { ZohoClient } from '@/lib/zoho-client';
+import { ZohoClientKV } from '@/lib/zoho-client-kv';
 
 export async function GET(request: NextRequest) {
   const requestId = generateRequestId();
@@ -13,28 +13,8 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 [TEST-LEAD] Testing lead ID:', leadId);
     
-    // Get Zoho tokens from environment variables
-    const zohoTokens = {
-      access_token: process.env.ZOHO_ACCESS_TOKEN || '',
-      refresh_token: process.env.ZOHO_REFRESH_TOKEN || '',
-      expires_in: 3600,
-      api_domain: process.env.ZOHO_API_DOMAIN || 'www.zohoapis.com',
-      token_type: 'Bearer',
-      expires_at: 0 // Force token refresh check
-    };
-
-    console.log('🔍 [TEST-LEAD] Zoho tokens configured:', {
-      hasAccessToken: !!zohoTokens.access_token,
-      hasRefreshToken: !!zohoTokens.refresh_token,
-      apiDomain: zohoTokens.api_domain
-    });
-
-    if (!zohoTokens.access_token) {
-      console.error('❌ [TEST-LEAD] Zoho access token not configured');
-      return ApiResponseHandler.error('Zoho access token not configured. Please set ZOHO_ACCESS_TOKEN in your environment variables.', 500, requestId);
-    }
-
-    const zohoClient = new ZohoClient(zohoTokens);
+    // Create KV-based Zoho client (no need to pass tokens)
+    const zohoClient = new ZohoClientKV();
 
     console.log('🔍 [TEST-LEAD] Created ZohoClient, fetching lead...');
     const lead = await zohoClient.getLead(leadId);

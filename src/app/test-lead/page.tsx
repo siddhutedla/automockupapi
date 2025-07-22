@@ -87,23 +87,23 @@ export default function TestLeadPage() {
               
               <div className="bg-gray-50 rounded-lg p-4">
                 <h3 className="text-sm font-medium text-black mb-2">Test Results:</h3>
-                <div className="space-y-2 text-sm text-black">
-                  <div><strong>Lead ID:</strong> {result.leadId}</div>
-                  <div><strong>Lead Found:</strong> {result.leadFound ? 'Yes' : 'No'}</div>
+                <div className="space-y-2 text-sm text-black !text-black">
+                  <div className="text-black"><strong>Lead ID:</strong> {result.leadId}</div>
+                  <div className="text-black"><strong>Lead Found:</strong> {result.leadFound ? 'Yes' : 'No'}</div>
                 </div>
               </div>
 
               {result.photoTest && (
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="text-sm font-medium text-black mb-2">Photo Test:</h3>
-                  <div className="space-y-2 text-sm text-black">
-                    <div><strong>Status:</strong> {result.photoTest.success ? 'Success' : 'Failed'}</div>
+                  <div className="space-y-2 text-sm text-black !text-black">
+                    <div className="text-black"><strong>Status:</strong> {result.photoTest.success ? 'Success' : 'Failed'}</div>
                     {result.photoTest.success ? (
                       <>
-                        <div><strong>Lead ID:</strong> {result.photoTest.leadId}</div>
-                        <div><strong>File Size:</strong> {result.photoTest.fileSize} bytes</div>
-                        <div><strong>Message:</strong> {result.photoTest.message}</div>
-                        <div className="mt-4">
+                        <div className="text-black"><strong>Lead ID:</strong> {result.photoTest.leadId}</div>
+                        <div className="text-black"><strong>File Size:</strong> {result.photoTest.fileSize} bytes</div>
+                        <div className="text-black"><strong>Message:</strong> {result.photoTest.message}</div>
+                        <div className="mt-4 text-black">
                           <strong>Downloaded Photo:</strong>
                           <div className="mt-2">
                             <img 
@@ -118,7 +118,7 @@ export default function TestLeadPage() {
                         </div>
                       </>
                     ) : (
-                      <div><strong>Error:</strong> {result.photoTest.error}</div>
+                      <div className="text-black"><strong>Error:</strong> {result.photoTest.error}</div>
                     )}
                   </div>
                 </div>
@@ -126,9 +126,9 @@ export default function TestLeadPage() {
 
               <div className="bg-gray-50 rounded-lg p-4">
                 <h3 className="text-sm font-medium text-black mb-2">Sample Fields:</h3>
-                <div className="space-y-1 text-sm text-black">
+                <div className="space-y-1 text-sm text-black !text-black">
                   {Object.entries(result.sampleFields).map(([key, value]) => (
-                    <div key={key}>
+                    <div key={key} className="text-black">
                       <strong>{key}:</strong> {value ? String(value) : 'null'}
                     </div>
                   ))}

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { ApiResponseHandler, generateRequestId, validateRequiredFields } from '@/lib/api-response';
-import { ZohoClient } from '@/lib/zoho-client';
+import { ZohoClientKV } from '@/lib/zoho-client-kv';
 import sharp from 'sharp';
 import { join } from 'path';
 import { writeFile as writeFileAsync, readFile } from 'fs/promises';
@@ -36,52 +36,8 @@ export async function POST(request: NextRequest) {
       return ApiResponseHandler.validationError(validationErrors, requestId);
     }
 
-    // Get Zoho tokens using token refresh service
-    let zohoTokens;
-    try {
-      const { TokenRefreshService } = await import('@/lib/token-refresh');
-      
-      // Check if we have the required environment variables
-      const clientId = process.env.ZOHO_CLIENT_ID;
-      const clientSecret = process.env.ZOHO_CLIENT_SECRET;
-      const refreshToken = process.env.ZOHO_REFRESH_TOKEN;
-      
-      if (!clientId || !clientSecret || !refreshToken) {
-        console.error('Missing Zoho environment variables:', {
-          hasClientId: !!clientId,
-          hasClientSecret: !!clientSecret,
-          hasRefreshToken: !!refreshToken
-        });
-        return ApiResponseHandler.error(
-          'Zoho configuration incomplete. Please check ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET, and ZOHO_REFRESH_TOKEN environment variables.',
-          500,
-          requestId
-        );
-      }
-
-      // Refresh the access token
-      const tokenData = await TokenRefreshService.refreshAccessToken();
-      
-      zohoTokens = {
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token,
-        expires_in: tokenData.expires_in,
-        api_domain: tokenData.api_domain,
-        token_type: tokenData.token_type,
-        expires_at: TokenRefreshService.calculateExpiryTime(tokenData.expires_in)
-      };
-
-      console.log('✅ [SIMPLE-MOCKUP] Zoho tokens configured successfully');
-    } catch (error) {
-      console.error('❌ [SIMPLE-MOCKUP] Failed to configure Zoho tokens:', error);
-      return ApiResponseHandler.error(
-        `Failed to configure Zoho tokens: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        500,
-        requestId
-      );
-    }
-
-    const zohoClient = new ZohoClient(zohoTokens);
+    // Create KV-based Zoho client (same as test-lead API)
+    const zohoClient = new ZohoClientKV();
     
     // Get lead data
     const lead = await zohoClient.getLead(body.leadID);
@@ -94,25 +50,14 @@ export async function POST(request: NextRequest) {
     let logoBuffer: Buffer;
     try {
       logoBuffer = await zohoClient.downloadLeadPhoto(body.leadID);
+      console.log('✅ [SIMPLE-MOCKUP] Lead photo downloaded, size:', logoBuffer.length, 'bytes');
     } catch (error) {
       console.error('Failed to download lead photo:', error);
       return ApiResponseHandler.error('Failed to download lead photo', 500, requestId);
     }
     
-    // Save to uploads directory
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const fileExtension = 'png';
-    const filename = `zoho-logo-${timestamp}-${randomString}.${fileExtension}`;
-    const uploadsDir = join(process.cwd(), 'public', 'uploads');
-    const logoPath = join(uploadsDir, filename);
-    
-    await writeFileAsync(logoPath, logoBuffer);
-    
-    console.log('Logo downloaded from Zoho CRM lead photo:', filename);
-    
     // Simple mockup generation - directly place logo on t-shirt templates
-    const mockups = await generateSimpleMockups(logoPath, body.company);
+    const mockups = await generateSimpleMockups(logoBuffer, body.company);
     
     const response: SimpleMockupResponse = {
       success: true,
@@ -131,9 +76,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function generateSimpleMockups(logoPath: string, companyName: string) {
+async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
   console.log('🎨 [SIMPLE-MOCKUP] Starting mockup generation...');
-  console.log('🎨 [SIMPLE-MOCKUP] Logo path:', logoPath);
+  console.log('🎨 [SIMPLE-MOCKUP] Logo buffer size:', logoBuffer.length, 'bytes');
   console.log('🎨 [SIMPLE-MOCKUP] Company name:', companyName);
   
   const mockups = [];
@@ -158,7 +103,7 @@ async function generateSimpleMockups(logoPath: string, companyName: string) {
   try {
     // Process logo for placement
     console.log('🎨 [SIMPLE-MOCKUP] Processing logo...');
-    const processedLogo = await sharp(logoPath)
+    const processedLogo = await sharp(logoBuffer)
       .resize(200, 200, { fit: 'inside', withoutEnlargement: true })
       .png()
       .toBuffer();

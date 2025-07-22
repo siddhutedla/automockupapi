@@ -1,9 +1,5 @@
-# Zoho CRM OAuth Configuration
-ZOHO_CLIENT_ID=your_client_id_here
-ZOHO_CLIENT_SECRET=your_client_secret_here
-ZOHO_REDIRECT_URI=https://automockupapi-git-main-siddhutedlas-projects.vercel.app/api/auth/zoho/callback
-
-# Optional: For direct API access (after OAuth)
+# Zoho CRM API Configuration
+# Direct API access using access tokens
 ZOHO_ACCESS_TOKEN=your_access_token_here
 ZOHO_REFRESH_TOKEN=your_refresh_token_here
 ZOHO_API_DOMAIN=www.zohoapis.com

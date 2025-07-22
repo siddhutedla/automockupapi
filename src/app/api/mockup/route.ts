@@ -80,46 +80,54 @@ export async function POST(request: NextRequest) {
 
         const zohoClient = new ZohoClient(zohoTokens);
         
-        // Fetch the lead to get the custom "Image Logo" field
+        // Fetch the lead to get attachments
         const lead = await zohoClient.getLead(body.leadID);
         
-        if (!lead || !lead['Image_Logo']) {
-          return ApiResponseHandler.error('No "Image Logo" field found for the specified lead', 404, requestId);
+        if (!lead) {
+          return ApiResponseHandler.error('Lead not found', 404, requestId);
         }
 
-        // The Image_Logo field should contain a URL to the image
-        const logoUrl = lead['Image_Logo'] as string;
+        // Get lead attachments
+        const attachments = await zohoClient.getLeadAttachments(body.leadID);
         
-        if (!logoUrl) {
-          return ApiResponseHandler.error('"Image Logo" field is empty for the specified lead', 404, requestId);
+        if (!attachments || attachments.length === 0) {
+          return ApiResponseHandler.error('No attachments found for the specified lead', 404, requestId);
         }
 
-        // Download the image from the URL
-        const imageResponse = await fetch(logoUrl);
-        
-        if (!imageResponse.ok) {
-          return ApiResponseHandler.error('Failed to download image from "Image Logo" field', 404, requestId);
+        // Find the first image attachment (logo)
+        const imageAttachment = attachments.find((attachment: Record<string, unknown>) => {
+          const fileName = (attachment.File_Name as string || '').toLowerCase();
+          const fileType = (attachment.File_Type as string || '').toLowerCase();
+          return fileType.startsWith('image/') || 
+                 fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || 
+                 fileName.endsWith('.png') || fileName.endsWith('.gif') || 
+                 fileName.endsWith('.webp') || fileName.endsWith('.svg');
+        });
+
+        if (!imageAttachment) {
+          return ApiResponseHandler.error('No image attachment found for the specified lead', 404, requestId);
         }
 
-        const imageBuffer = await imageResponse.arrayBuffer();
+        // Download the attachment
+        const attachmentId = imageAttachment.id as string;
+        const imageBuffer = await zohoClient.downloadAttachment(attachmentId);
         
         // Save to uploads directory
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substring(2, 15);
-        // Try to determine file extension from URL or default to png
-        const urlParts = logoUrl.split('.');
-        const fileExtension = urlParts.length > 1 ? urlParts[urlParts.length - 1].split('?')[0] : 'png';
-        const filename = `zoho-logo-${timestamp}-${randomString}.${fileExtension}`;
+        const fileName = imageAttachment.File_Name as string || 'logo';
+        const fileExtension = fileName.split('.').pop() || 'png';
+        const filename = `zoho-attachment-${timestamp}-${randomString}.${fileExtension}`;
         const uploadsDir = join(process.cwd(), 'public', 'uploads');
         logoPath = join(uploadsDir, filename);
         
-        await writeFileAsync(logoPath, Buffer.from(imageBuffer));
+        await writeFileAsync(logoPath, imageBuffer);
         
-        console.log('Logo downloaded from Zoho CRM "Image Logo" field:', filename);
+        console.log('Logo downloaded from Zoho CRM attachment:', filename);
         
       } catch (error) {
-        console.error('Error fetching logo from Zoho CRM:', error);
-        return ApiResponseHandler.error('Failed to fetch logo from Zoho CRM "Image Logo" field', 500, requestId);
+        console.error('Error fetching logo from Zoho CRM attachments:', error);
+        return ApiResponseHandler.error('Failed to fetch logo from Zoho CRM attachments', 500, requestId);
       }
     } else {
       // Use provided logoUrl

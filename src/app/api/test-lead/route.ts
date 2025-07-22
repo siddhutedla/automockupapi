@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     };
 
     if (!zohoTokens.access_token) {
-      return ApiResponseHandler.error('Zoho access token not configured. Please complete OAuth flow first.', 500, requestId);
+      return ApiResponseHandler.error('Zoho access token not configured. Please set ZOHO_ACCESS_TOKEN in your environment variables.', 500, requestId);
     }
 
     const zohoClient = new ZohoClient(zohoTokens);
@@ -36,21 +36,21 @@ export async function GET(request: NextRequest) {
       return ApiResponseHandler.error('Lead not found', 404, requestId);
     }
 
-    // Check for Image Logo field
-    const imageLogoUrl = lead['Image_Logo'] as string;
+    // Get lead attachments
+    const attachments = await zohoClient.getLeadAttachments(leadId);
     
     const result = {
       leadId,
       leadFound: true,
-      hasImageLogoField: !!lead['Image_Logo'],
-      imageLogoUrl: imageLogoUrl || null,
+      hasAttachments: attachments && attachments.length > 0,
+      attachmentCount: attachments ? attachments.length : 0,
+      attachments: attachments || [],
       allFields: Object.keys(lead),
       sampleFields: {
         First_Name: lead['First_Name'],
         Last_Name: lead['Last_Name'],
         Email: lead['Email'],
-        Company: lead['Company'],
-        Image_Logo: lead['Image_Logo']
+        Company: lead['Company']
       }
     };
 

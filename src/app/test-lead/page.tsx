@@ -6,12 +6,11 @@ import { TestTube, CheckCircle, AlertCircle } from 'lucide-react';
 interface TestResult {
   leadId: string;
   leadFound: boolean;
-  hasAttachments: boolean;
-  attachmentCount: number;
-  attachments: Record<string, unknown>[];
+  hasImageLogoField: boolean;
+  imageLogoField: unknown;
   downloadTest: {
     success: boolean;
-    attachmentId?: string;
+    fileUrl?: string;
     fileName?: string;
     fileSize?: number;
     message?: string;
@@ -94,8 +93,7 @@ export default function TestLeadPage() {
                 <div className="space-y-2 text-sm">
                   <div><strong>Lead ID:</strong> {result.leadId}</div>
                   <div><strong>Lead Found:</strong> {result.leadFound ? 'Yes' : 'No'}</div>
-                  <div><strong>Has Attachments:</strong> {result.hasAttachments ? 'Yes' : 'No'}</div>
-                  <div><strong>Attachment Count:</strong> {result.attachmentCount}</div>
+                  <div><strong>Has Image Logo Field:</strong> {result.hasImageLogoField ? 'Yes' : 'No'}</div>
                 </div>
               </div>
 
@@ -109,13 +107,13 @@ export default function TestLeadPage() {
                         <div><strong>File Name:</strong> {result.downloadTest.fileName}</div>
                         <div><strong>File Size:</strong> {result.downloadTest.fileSize} bytes</div>
                         <div><strong>Message:</strong> {result.downloadTest.message}</div>
-                        {result.downloadTest.attachmentId && (
+                        {result.downloadTest.fileUrl && (
                           <div className="mt-4">
                             <strong>Downloaded Image:</strong>
                             <div className="mt-2">
                               <img 
-                                src={`/api/test-lead/image?leadId=${result.leadId}&attachmentId=${result.downloadTest.attachmentId}`}
-                                alt="Downloaded attachment"
+                                src={`/api/test-lead/image?fileUrl=${encodeURIComponent(result.downloadTest.fileUrl)}`}
+                                alt="Downloaded Image_Logo"
                                 className="max-w-full h-auto max-h-64 border border-gray-300 rounded"
                                 onError={(e) => {
                                   e.currentTarget.style.display = 'none';
@@ -132,18 +130,11 @@ export default function TestLeadPage() {
                 </div>
               )}
 
-              {result.attachments && result.attachments.length > 0 && (
+              {result.imageLogoField !== null && result.imageLogoField !== undefined && (
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-900 mb-2">Attachments ({result.attachments.length}):</h3>
+                  <h3 className="text-sm font-medium text-gray-900 mb-2">Image Logo Field:</h3>
                   <div className="space-y-2 text-sm">
-                    {result.attachments.map((attachment: Record<string, unknown>, index: number) => (
-                      <div key={index} className="border border-gray-200 rounded p-2">
-                        <div><strong>ID:</strong> {String(attachment.id || 'N/A')}</div>
-                        <div><strong>File Name:</strong> {String(attachment.File_Name || 'N/A')}</div>
-                        <div><strong>File Type:</strong> {String(attachment.File_Type || 'N/A')}</div>
-                        <div><strong>Size:</strong> {String(attachment.Size || 'N/A')} bytes</div>
-                      </div>
-                    ))}
+                    <div><strong>Field Value:</strong> <pre className="text-xs overflow-auto">{String(JSON.stringify(result.imageLogoField as Record<string, unknown>, null, 2))}</pre></div>
                   </div>
                 </div>
               )}

@@ -80,54 +80,58 @@ export async function POST(request: NextRequest) {
 
         const zohoClient = new ZohoClient(zohoTokens);
         
-        // Fetch the lead to get attachments
+        // Fetch the lead to get the Image_Logo field
         const lead = await zohoClient.getLead(body.leadID);
         
         if (!lead) {
           return ApiResponseHandler.error('Lead not found', 404, requestId);
         }
 
-        // Get lead attachments
-        const attachments = await zohoClient.getLeadAttachments(body.leadID);
+        // Check for Image_Logo custom field
+        const imageLogoField = lead['Image_Logo'];
         
-        if (!attachments || attachments.length === 0) {
-          return ApiResponseHandler.error('No attachments found for the specified lead', 404, requestId);
+        if (!imageLogoField) {
+          return ApiResponseHandler.error('No Image_Logo field found for the specified lead', 404, requestId);
         }
 
-        // Find the first image attachment (logo)
-        const imageAttachment = attachments.find((attachment: Record<string, unknown>) => {
-          const fileName = (attachment.File_Name as string || '').toLowerCase();
-          const fileType = (attachment.File_Type as string || '').toLowerCase();
-          return fileType.startsWith('image/') || 
-                 fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || 
-                 fileName.endsWith('.png') || fileName.endsWith('.gif') || 
-                 fileName.endsWith('.webp') || fileName.endsWith('.svg');
-        });
-
-        if (!imageAttachment) {
-          return ApiResponseHandler.error('No image attachment found for the specified lead', 404, requestId);
+        // Download the Image_Logo file
+        let fileUrl: string;
+        let fileName: string = 'logo.png';
+        
+        // Handle different response formats
+        if (typeof imageLogoField === 'string') {
+          // Direct URL format
+          fileUrl = imageLogoField;
+        } else if (typeof imageLogoField === 'object' && imageLogoField !== null) {
+          // Object format with link_url
+          const logoObj = imageLogoField as Record<string, unknown>;
+          fileUrl = logoObj.link_url as string || logoObj.download_url as string;
+          fileName = logoObj.name as string || 'logo.png';
+        } else {
+          return ApiResponseHandler.error('Invalid Image_Logo field format', 400, requestId);
+        }
+        
+        if (!fileUrl) {
+          return ApiResponseHandler.error('No file URL found in Image_Logo field', 404, requestId);
         }
 
-        // Download the attachment
-        const attachmentId = imageAttachment.id as string;
-        const imageBuffer = await zohoClient.downloadAttachment(body.leadID, attachmentId);
+        const imageBuffer = await zohoClient.downloadCustomFile(fileUrl);
         
         // Save to uploads directory
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substring(2, 15);
-        const fileName = imageAttachment.File_Name as string || 'logo';
         const fileExtension = fileName.split('.').pop() || 'png';
-        const filename = `zoho-attachment-${timestamp}-${randomString}.${fileExtension}`;
+        const filename = `zoho-logo-${timestamp}-${randomString}.${fileExtension}`;
         const uploadsDir = join(process.cwd(), 'public', 'uploads');
         logoPath = join(uploadsDir, filename);
         
         await writeFileAsync(logoPath, imageBuffer);
         
-        console.log('Logo downloaded from Zoho CRM attachment:', filename);
+        console.log('Logo downloaded from Zoho CRM Image_Logo field:', filename);
         
       } catch (error) {
-        console.error('Error fetching logo from Zoho CRM attachments:', error);
-        return ApiResponseHandler.error('Failed to fetch logo from Zoho CRM attachments', 500, requestId);
+        console.error('Error fetching logo from Zoho CRM Image_Logo field:', error);
+        return ApiResponseHandler.error('Failed to fetch logo from Zoho CRM Image_Logo field', 500, requestId);
       }
     } else {
       // Use provided logoUrl

@@ -4,11 +4,10 @@ import { ZohoClient } from '@/lib/zoho-client';
 
 export async function GET(request: NextRequest) {
   const requestId = generateRequestId();
+  const { searchParams } = new URL(request.url);
+  const leadId = searchParams.get('leadId') || '6764494000001367215';
   
   try {
-    const { searchParams } = new URL(request.url);
-    const leadId = searchParams.get('leadId') || '6764494000001367215';
-
     console.log('Testing lead ID:', leadId);
 
     // Get Zoho tokens from environment variables
@@ -36,54 +35,62 @@ export async function GET(request: NextRequest) {
       return ApiResponseHandler.error('Lead not found', 404, requestId);
     }
 
-    // Get lead attachments
-    const attachments = await zohoClient.getLeadAttachments(leadId);
+    // Check for Image_Logo custom field
+    const imageLogoField = lead['Image_Logo'];
     
-    // Test downloading the first image attachment if available
+    // Test downloading the Image_Logo file if available
     let downloadTest = null;
-    if (attachments && attachments.length > 0) {
-      const imageAttachment = attachments.find((attachment: Record<string, unknown>) => {
-        const fileName = (attachment.File_Name as string || '').toLowerCase();
-        const fileType = (attachment.File_Type as string || '').toLowerCase();
-        return fileType.startsWith('image/') || 
-               fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || 
-               fileName.endsWith('.png') || fileName.endsWith('.gif') || 
-               fileName.endsWith('.webp') || fileName.endsWith('.svg');
-      });
-
-      if (imageAttachment) {
-        try {
-          const attachmentId = imageAttachment.id as string;
-          const imageBuffer = await zohoClient.downloadAttachment(leadId, attachmentId);
-          downloadTest = {
-            success: true,
-            attachmentId,
-            fileName: imageAttachment.File_Name,
-            fileSize: imageBuffer.length,
-            message: 'Attachment download successful'
-          };
-        } catch (downloadError) {
-          downloadTest = {
-            success: false,
-            error: downloadError instanceof Error ? downloadError.message : 'Download failed'
-          };
+    if (imageLogoField) {
+      try {
+        let fileUrl: string;
+        let fileName: string = 'logo.png';
+        
+        // Handle different response formats
+        if (typeof imageLogoField === 'string') {
+          // Direct URL format
+          fileUrl = imageLogoField;
+        } else if (typeof imageLogoField === 'object' && imageLogoField !== null) {
+          // Object format with link_url
+          const logoObj = imageLogoField as Record<string, unknown>;
+          fileUrl = logoObj.link_url as string || logoObj.download_url as string;
+          fileName = logoObj.name as string || 'logo.png';
+        } else {
+          throw new Error('Invalid Image_Logo field format');
         }
+        
+        if (!fileUrl) {
+          throw new Error('No file URL found in Image_Logo field');
+        }
+        
+        const imageBuffer = await zohoClient.downloadCustomFile(fileUrl);
+        downloadTest = {
+          success: true,
+          fileUrl,
+          fileName,
+          fileSize: imageBuffer.length,
+          message: 'Image_Logo download successful'
+        };
+      } catch (downloadError) {
+        downloadTest = {
+          success: false,
+          error: downloadError instanceof Error ? downloadError.message : 'Download failed'
+        };
       }
     }
     
     const result = {
       leadId,
       leadFound: true,
-      hasAttachments: attachments && attachments.length > 0,
-      attachmentCount: attachments ? attachments.length : 0,
-      attachments: attachments || [],
+      hasImageLogoField: !!imageLogoField,
+      imageLogoField,
       downloadTest,
       allFields: Object.keys(lead),
       sampleFields: {
         First_Name: lead['First_Name'],
         Last_Name: lead['Last_Name'],
         Email: lead['Email'],
-        Company: lead['Company']
+        Company: lead['Company'],
+        Image_Logo: imageLogoField
       }
     };
 
@@ -95,6 +102,11 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Lead test error:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      leadId: leadId
+    });
     return ApiResponseHandler.serverError(
       `Failed to test lead: ${error instanceof Error ? error.message : 'Unknown error'}`,
       requestId

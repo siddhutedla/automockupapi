@@ -26,22 +26,22 @@ ZOHO_API_DOMAIN=www.zohoapis.com
 #### Zoho CRM Data
 - **GET** `/api/test-lead` - Test lead data retrieval
 
-### 4. Using Attachments
+### 4. Using Custom File Upload Fields
 
-The system now uses Zoho CRM v2 API attachments instead of custom fields:
-- Upload logo images as attachments to your leads
-- The system will automatically find and use the first image attachment
+The system now uses Zoho CRM custom file upload fields (like Image_Logo):
+- Upload logo images to the Image_Logo custom field on your leads
+- The system will automatically download and use the image from this field
 - Supported formats: JPG, JPEG, PNG, GIF, WEBP, SVG
-- The attachment will be downloaded and used for mockup generation
+- The image will be downloaded and used for mockup generation
 - Uses the correct Zoho CRM v2 API endpoints:
-  - `GET /crm/v2/Leads/{lead_id}/Attachments` - List attachments
-  - `GET /crm/v2/Leads/{lead_id}/Attachments/{attachment_id}` - Download attachment
+  - `GET /crm/v2/Leads/{lead_id}` - Get lead with Image_Logo field
+  - `GET /crm/v2/file/{file_id}` - Download the image file
 
 ### 5. Usage Examples
 
 #### Test Lead Data
 ```javascript
-const response = await fetch('/api/test-lead?leadId=6764494000001367196');
+const response = await fetch('/api/test-lead?leadId=6764494000001367215');
 const result = await response.json();
 console.log(result.data);
 // Returns lead info, attachment details, and download test results
@@ -53,7 +53,7 @@ const response = await fetch('/api/mockup', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    leadID: '6764494000001367196', // Lead ID with attachments
+    leadID: '6764494000001367215', // Lead ID with attachments
     industry: 'technology',
     companyName: 'Your Company',
     tagline: 'Your tagline',

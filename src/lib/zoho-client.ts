@@ -200,7 +200,7 @@ export class ZohoClient {
   async getLeadAttachments(leadId: string): Promise<Record<string, unknown>[]> {
     await this.refreshTokenIfNeeded();
 
-    const response = await fetch(`${this.baseUrl}/crm/v2/Leads/${leadId}/Attachments`, {
+    const response = await fetch(`${this.baseUrl}/crm/v3/Leads/${leadId}/Attachments`, {
       headers: {
         'Authorization': `Zoho-oauthtoken ${this.tokens!.access_token}`,
         'Content-Type': 'application/json',
@@ -218,7 +218,7 @@ export class ZohoClient {
   async getLead(leadId: string): Promise<Record<string, unknown>> {
     await this.refreshTokenIfNeeded();
 
-    const response = await fetch(`${this.baseUrl}/crm/v2/Leads/${leadId}`, {
+    const response = await fetch(`${this.baseUrl}/crm/v3/Leads/${leadId}`, {
       headers: {
         'Authorization': `Zoho-oauthtoken ${this.tokens!.access_token}`,
         'Content-Type': 'application/json',
@@ -233,10 +233,10 @@ export class ZohoClient {
     return data.data?.[0] || {};
   }
 
-  async downloadAttachment(leadId: string, attachmentId: string): Promise<Buffer> {
+  async downloadCustomFile(fileUrl: string): Promise<Buffer> {
     await this.refreshTokenIfNeeded();
 
-    const response = await fetch(`${this.baseUrl}/crm/v2/Leads/${leadId}/Attachments/${attachmentId}`, {
+    const response = await fetch(`${this.baseUrl}${fileUrl}`, {
       headers: {
         'Authorization': `Zoho-oauthtoken ${this.tokens!.access_token}`,
         'Accept': 'application/octet-stream',
@@ -244,7 +244,7 @@ export class ZohoClient {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to download attachment');
+      throw new Error('Failed to download custom file');
     }
 
     const arrayBuffer = await response.arrayBuffer();

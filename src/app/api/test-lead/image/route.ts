@@ -7,11 +7,10 @@ export async function GET(request: NextRequest) {
   
   try {
     const { searchParams } = new URL(request.url);
-    const leadId = searchParams.get('leadId');
-    const attachmentId = searchParams.get('attachmentId');
+    const fileUrl = searchParams.get('fileUrl');
 
-    if (!leadId || !attachmentId) {
-      return ApiResponseHandler.error('Missing leadId or attachmentId parameter', 400, requestId);
+    if (!fileUrl) {
+      return ApiResponseHandler.error('Missing fileUrl parameter', 400, requestId);
     }
 
     // Get Zoho tokens from environment variables
@@ -30,8 +29,8 @@ export async function GET(request: NextRequest) {
 
     const zohoClient = new ZohoClient(zohoTokens);
     
-    // Download the attachment
-    const imageBuffer = await zohoClient.downloadAttachment(leadId, attachmentId);
+    // Download the custom file
+    const imageBuffer = await zohoClient.downloadCustomFile(fileUrl);
     
     // Return the image as a response
     return new Response(imageBuffer, {

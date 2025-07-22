@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       expires_in: 3600,
       api_domain: process.env.ZOHO_API_DOMAIN || 'www.zohoapis.com',
       token_type: 'Bearer',
-      expires_at: Date.now() + 3600000
+      expires_at: 0 // Force token refresh check
     };
 
     console.log('🔍 [TEST-LEAD] Zoho tokens configured:', {

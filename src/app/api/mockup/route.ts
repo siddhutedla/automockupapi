@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
 
         // Download the attachment
         const attachmentId = imageAttachment.id as string;
-        const imageBuffer = await zohoClient.downloadAttachment(attachmentId);
+        const imageBuffer = await zohoClient.downloadAttachment(body.leadID, attachmentId);
         
         // Save to uploads directory
         const timestamp = Date.now();

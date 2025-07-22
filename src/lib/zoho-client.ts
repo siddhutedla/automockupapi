@@ -200,7 +200,7 @@ export class ZohoClient {
   async getLeadAttachments(leadId: string): Promise<Record<string, unknown>[]> {
     await this.refreshTokenIfNeeded();
 
-    const response = await fetch(`${this.baseUrl}/crm/v3/Leads/${leadId}/Attachments`, {
+    const response = await fetch(`${this.baseUrl}/crm/v2/Leads/${leadId}/Attachments`, {
       headers: {
         'Authorization': `Zoho-oauthtoken ${this.tokens!.access_token}`,
         'Content-Type': 'application/json',
@@ -218,7 +218,7 @@ export class ZohoClient {
   async getLead(leadId: string): Promise<Record<string, unknown>> {
     await this.refreshTokenIfNeeded();
 
-    const response = await fetch(`${this.baseUrl}/crm/v3/Leads/${leadId}`, {
+    const response = await fetch(`${this.baseUrl}/crm/v2/Leads/${leadId}`, {
       headers: {
         'Authorization': `Zoho-oauthtoken ${this.tokens!.access_token}`,
         'Content-Type': 'application/json',
@@ -233,12 +233,13 @@ export class ZohoClient {
     return data.data?.[0] || {};
   }
 
-  async downloadAttachment(attachmentId: string): Promise<Buffer> {
+  async downloadAttachment(leadId: string, attachmentId: string): Promise<Buffer> {
     await this.refreshTokenIfNeeded();
 
-    const response = await fetch(`${this.baseUrl}/crm/v3/Leads/Attachments/${attachmentId}`, {
+    const response = await fetch(`${this.baseUrl}/crm/v2/Leads/${leadId}/Attachments/${attachmentId}`, {
       headers: {
         'Authorization': `Zoho-oauthtoken ${this.tokens!.access_token}`,
+        'Accept': 'application/octet-stream',
       },
     });
 

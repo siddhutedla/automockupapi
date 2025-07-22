@@ -28,11 +28,14 @@ ZOHO_API_DOMAIN=www.zohoapis.com
 
 ### 4. Using Attachments
 
-The system now uses Zoho CRM attachments instead of custom fields:
+The system now uses Zoho CRM v2 API attachments instead of custom fields:
 - Upload logo images as attachments to your leads
 - The system will automatically find and use the first image attachment
 - Supported formats: JPG, JPEG, PNG, GIF, WEBP, SVG
 - The attachment will be downloaded and used for mockup generation
+- Uses the correct Zoho CRM v2 API endpoints:
+  - `GET /crm/v2/Leads/{lead_id}/Attachments` - List attachments
+  - `GET /crm/v2/Leads/{lead_id}/Attachments/{attachment_id}` - Download attachment
 
 ### 5. Usage Examples
 

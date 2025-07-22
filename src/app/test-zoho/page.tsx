@@ -22,7 +22,7 @@ export default function TestZohoPage() {
       } else {
         setError(result.error || 'Failed to get OAuth URL');
       }
-    } catch (error) {
+    } catch {
       setError('Network error occurred');
     } finally {
       setIsLoading(false);
@@ -98,7 +98,7 @@ export default function TestZohoPage() {
         <div className="mt-8 pt-6 border-t border-gray-200">
           <h3 className="text-sm font-medium text-gray-900 mb-2">What happens next?</h3>
           <ol className="text-xs text-gray-600 space-y-1">
-            <li>1. Click "Go to Zoho OAuth" to authorize</li>
+            <li>1. Click &quot;Go to Zoho OAuth&quot; to authorize</li>
             <li>2. Zoho will redirect back to your callback URL</li>
             <li>3. Your app will receive access tokens</li>
             <li>4. You can then use the Zoho CRM API</li>

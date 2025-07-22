@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { ApiResponseHandler, generateRequestId } from '@/lib/api-response';
 
 // Zoho CRM OAuth Configuration
@@ -6,7 +6,7 @@ const ZOHO_CLIENT_ID = process.env.ZOHO_CLIENT_ID || '';
 const ZOHO_CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET || '';
 const ZOHO_REDIRECT_URI = process.env.ZOHO_REDIRECT_URI || 'https://automockupapi-git-main-siddhutedlas-projects.vercel.app/api/auth/zoho/callback';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const requestId = generateRequestId();
   
   try {
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     authUrl.searchParams.set('prompt', 'consent');
     
     // Generate state parameter for security
-    const state = generateRequestId();
+    const state = 'oauth_state_' + Date.now();
     
     return ApiResponseHandler.success(
       {
@@ -73,14 +73,11 @@ export async function POST(request: NextRequest) {
     }
     
     // Store tokens securely (in production, use a secure database)
-    const tokens = {
-      access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token,
-      expires_in: tokenData.expires_in,
-      api_domain: tokenData.api_domain,
-      token_type: tokenData.token_type,
-      expires_at: Date.now() + (tokenData.expires_in * 1000)
-    };
+    console.log('OAuth tokens received:', {
+      access_token: tokenData.access_token ? '***' : 'missing',
+      refresh_token: tokenData.refresh_token ? '***' : 'missing',
+      api_domain: tokenData.api_domain
+    });
     
     return ApiResponseHandler.success(
       {

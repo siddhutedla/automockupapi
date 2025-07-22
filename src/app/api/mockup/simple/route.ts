@@ -138,7 +138,7 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
         {
           input: frontLogo,
           top: Math.round(height * 0.25), // Better chest position
-          left: width - 170  // Right side margin
+          left: width - 180  // Right side margin
         }
       ])
       .png()
@@ -153,12 +153,41 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
       .png()
       .toBuffer();
     
+    // Create simple text overlay for company name
+    const textWidth = companyName.length * 8; // Smaller width calculation
+    const companyText = await sharp({
+      create: {
+        width: textWidth,
+        height: 20,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
+      }
+    })
+    .composite([
+      {
+        input: Buffer.from(`
+          <svg width="${textWidth}" height="20">
+            <text x="${textWidth/2}" y="15" font-family="Arial" font-size="12" fill="black" text-anchor="middle">${companyName}</text>
+          </svg>
+        `),
+        top: 0,
+        left: 0
+      }
+    ])
+    .png()
+    .toBuffer();
+    
     const backMockup = await sharp(backShirtTemplate)
       .composite([
         {
           input: backLogo,
           top: Math.round(height * 0.22), // Center vertically
           left: Math.round((width - 100) / 2)  // Center horizontally
+        },
+        {
+          input: companyText,
+          top: Math.round(height * 0.35), // Below the logo
+          left: Math.round((width - textWidth) / 2)  // Center horizontally
         }
       ])
       .png()

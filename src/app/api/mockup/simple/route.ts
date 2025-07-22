@@ -129,7 +129,7 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
     // Generate front mockup - logo on right chest, smaller size
     console.log('🎨 [SIMPLE-MOCKUP] Generating front mockup...');
     const frontLogo = await sharp(logoBuffer)
-      .resize(60, 60, { fit: 'inside', withoutEnlargement: true }) // Even smaller for right chest
+      .resize(50, 50, { fit: 'inside', withoutEnlargement: true }) // Even smaller for right chest
       .png()
       .toBuffer();
     
@@ -138,7 +138,7 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
         {
           input: frontLogo,
           top: Math.round(height * 0.22), // Better chest position
-          left: width - 120  // Right side margin
+          left: width - 90  // Right side margin
         }
       ])
       .png()
@@ -153,11 +153,12 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
       .png()
       .toBuffer();
     
-    // Create company name text for back mockup - simpler approach
+    // Create company name text for back mockup - using a different approach
+    const textWidth = companyName.length * 12; // Approximate width
     const companyText = await sharp({
       create: {
-        width: 300,
-        height: 30,
+        width: textWidth + 20,
+        height: 25,
         channels: 4,
         background: { r: 0, g: 0, b: 0, alpha: 0 }
       }
@@ -165,8 +166,8 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
     .composite([
       {
         input: Buffer.from(`
-          <svg width="300" height="30">
-            <text x="0" y="22" font-family="Arial, sans-serif" font-size="18" fill="black" font-weight="normal">${companyName}</text>
+          <svg width="${textWidth + 20}" height="25">
+            <text x="10" y="18" font-family="Arial, sans-serif" font-size="16" fill="black" text-anchor="middle">${companyName}</text>
           </svg>
         `),
         top: 0,
@@ -186,7 +187,7 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
         {
           input: companyText,
           top: Math.round(height * 0.42), // Closer to logo
-          left: Math.round((width - 300) / 2)  // Center horizontally
+          left: Math.round((width - (textWidth + 20)) / 2)  // Center horizontally based on actual text width
         }
       ])
       .png()

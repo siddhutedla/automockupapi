@@ -126,10 +126,10 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
       .png()
       .toBuffer();
     
-    // Generate front mockup - logo on left chest, smaller size
+    // Generate front mockup - logo on right chest, smaller size
     console.log('🎨 [SIMPLE-MOCKUP] Generating front mockup...');
     const frontLogo = await sharp(logoBuffer)
-      .resize(80, 80, { fit: 'inside', withoutEnlargement: true }) // Smaller for left chest
+      .resize(60, 60, { fit: 'inside', withoutEnlargement: true }) // Even smaller for right chest
       .png()
       .toBuffer();
     
@@ -137,8 +137,8 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
       .composite([
         {
           input: frontLogo,
-          top: Math.round(height * 0.25), // Left chest position
-          left: 80  // Better left side margin
+          top: Math.round(height * 0.22), // Better chest position
+          left: width - 120  // Right side margin
         }
       ])
       .png()
@@ -146,18 +146,18 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
     
     console.log('✅ [SIMPLE-MOCKUP] Front mockup generated, size:', frontMockup.length, 'bytes');
     
-    // Generate back mockup - logo in middle, slightly bigger with company name
+    // Generate back mockup - logo in middle, smaller with company name
     console.log('🎨 [SIMPLE-MOCKUP] Generating back mockup...');
     const backLogo = await sharp(logoBuffer)
-      .resize(130, 130, { fit: 'inside', withoutEnlargement: true }) // Slightly bigger but not too big
+      .resize(100, 100, { fit: 'inside', withoutEnlargement: true }) // Smaller logo
       .png()
       .toBuffer();
     
-    // Create company name text for back mockup
+    // Create company name text for back mockup - simpler approach
     const companyText = await sharp({
       create: {
-        width: 400,
-        height: 40,
+        width: 300,
+        height: 30,
         channels: 4,
         background: { r: 0, g: 0, b: 0, alpha: 0 }
       }
@@ -165,8 +165,8 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
     .composite([
       {
         input: Buffer.from(`
-          <svg width="400" height="40">
-            <text x="0" y="28" font-family="Arial, sans-serif" font-size="20" fill="rgb(0,0,0)" font-weight="bold">${companyName}</text>
+          <svg width="300" height="30">
+            <text x="0" y="22" font-family="Arial, sans-serif" font-size="18" fill="black" font-weight="normal">${companyName}</text>
           </svg>
         `),
         top: 0,
@@ -181,12 +181,12 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
         {
           input: backLogo,
           top: Math.round(height * 0.25), // Center vertically
-          left: Math.round((width - 130) / 2)  // Center horizontally
+          left: Math.round((width - 100) / 2)  // Center horizontally
         },
         {
           input: companyText,
-          top: Math.round(height * 0.45), // Below the logo
-          left: Math.round((width - 400) / 2)  // Center horizontally
+          top: Math.round(height * 0.42), // Closer to logo
+          left: Math.round((width - 300) / 2)  // Center horizontally
         }
       ])
       .png()

@@ -16,6 +16,7 @@ interface SimpleMockupResponse {
   mockups: {
     type: 'tshirt-front' | 'tshirt-back';
     buffer: Buffer;
+    filename: string;
   }[];
   error?: string;
 }
@@ -228,9 +229,20 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
     
     console.log('✅ [SIMPLE-MOCKUP] Binary conversion completed');
     
+    // Create clean company name for filename (remove special characters)
+    const cleanCompanyName = companyName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+    
     mockups.push(
-      { type: 'tshirt-front' as const, buffer: frontBuffer },
-      { type: 'tshirt-back' as const, buffer: backBuffer }
+      { 
+        type: 'tshirt-front' as const, 
+        buffer: frontBuffer,
+        filename: `${cleanCompanyName}-tshirt-front.png`
+      },
+      { 
+        type: 'tshirt-back' as const, 
+        buffer: backBuffer,
+        filename: `${cleanCompanyName}-tshirt-back.png`
+      }
     );
     
     console.log('✅ [SIMPLE-MOCKUP] Mockup generation completed successfully');

@@ -3,7 +3,7 @@ import { ApiResponseHandler, generateRequestId, validateRequiredFields } from '@
 import { ZohoClientKV } from '@/lib/zoho-client-kv';
 import sharp from 'sharp';
 import { join } from 'path';
-import { writeFile as writeFileAsync, readFile } from 'fs/promises';
+import { writeFile as writeFileAsync, readFile, access, stat } from 'fs/promises';
 import { createCanvas, registerFont } from 'canvas';
 
 interface SimpleMockupRequest {
@@ -158,8 +158,20 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
     const textWidth = companyName.length * 12;
     const textHeight = 35;
     
-    // Register the font
+    // Register the font with proper checking
     const fontPath = join(process.cwd(), 'public', 'RobotoMono.ttf');
+    
+    // Check if font file exists and get its size
+    console.log('🎨 [SIMPLE-MOCKUP] Font path:', fontPath);
+    try {
+      await access(fontPath);
+      console.log('🎨 [SIMPLE-MOCKUP] Font exists?', true);
+      const fontStats = await stat(fontPath);
+      console.log('🎨 [SIMPLE-MOCKUP] Font size:', fontStats.size, 'bytes');
+    } catch (error) {
+      console.log('❌ [SIMPLE-MOCKUP] Font file not found!', error);
+    }
+    
     registerFont(fontPath, { family: 'RobotoMono' });
     
     // Create canvas and context

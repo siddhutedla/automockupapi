@@ -154,9 +154,8 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
       .png()
       .toBuffer();
     
-    // Create company name text using canvas approach
-    const textWidth = companyName.length * 12;
-    const textHeight = 35;
+    // Create company name text using canvas approach with dynamic width
+    const textHeight = 20;
     
     // Register the font with proper checking
     const fontPath = join(process.cwd(), 'public', 'RobotoMono.ttf');
@@ -174,7 +173,20 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
     
     registerFont(fontPath, { family: 'RobotoMono' });
     
-    // Create canvas and context
+    // Create temporary canvas to measure text width
+    const tempCanvas = createCanvas(1, 1);
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.font = '16px RobotoMono';
+    
+    // Measure actual text width
+    const metrics = tempCtx.measureText(companyName);
+    const textWidth = metrics.width + 20; // Add padding
+    
+    console.log('🎨 [SIMPLE-MOCKUP] Company name:', companyName);
+    console.log('🎨 [SIMPLE-MOCKUP] Measured text width:', metrics.width);
+    console.log('🎨 [SIMPLE-MOCKUP] Final canvas width:', textWidth);
+    
+    // Create canvas and context with measured width
     const canvas = createCanvas(textWidth, textHeight);
     const ctx = canvas.getContext('2d');
     
@@ -201,7 +213,7 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
         },
         {
           input: companyText,
-          top: Math.round(height * 0.35), // Below the logo
+          top: Math.round(height * 0.39), // Below the logo
           left: Math.round((width - textWidth) / 2)  // Center horizontally
         }
       ])

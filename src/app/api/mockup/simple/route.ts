@@ -15,7 +15,7 @@ interface SimpleMockupResponse {
   success: boolean;
   mockups: {
     type: 'tshirt-front' | 'tshirt-back';
-    base64: string;
+    buffer: Buffer;
   }[];
   error?: string;
 }
@@ -222,15 +222,15 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
     
     console.log('✅ [SIMPLE-MOCKUP] Back mockup generated, size:', backMockup.length, 'bytes');
     
-    // Convert to base64 (without data URL prefix)
-    const frontBase64 = frontMockup.toString('base64');
-    const backBase64 = backMockup.toString('base64');
+    // Convert to binary buffers
+    const frontBuffer = frontMockup;
+    const backBuffer = backMockup;
     
-    console.log('✅ [SIMPLE-MOCKUP] Base64 conversion completed');
+    console.log('✅ [SIMPLE-MOCKUP] Binary conversion completed');
     
     mockups.push(
-      { type: 'tshirt-front' as const, base64: frontBase64 },
-      { type: 'tshirt-back' as const, base64: backBase64 }
+      { type: 'tshirt-front' as const, buffer: frontBuffer },
+      { type: 'tshirt-back' as const, buffer: backBuffer }
     );
     
     console.log('✅ [SIMPLE-MOCKUP] Mockup generation completed successfully');

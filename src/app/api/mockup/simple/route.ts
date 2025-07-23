@@ -222,9 +222,9 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
     
     console.log('✅ [SIMPLE-MOCKUP] Back mockup generated, size:', backMockup.length, 'bytes');
     
-    // Convert to base64
-    const frontBase64 = `data:image/png;base64,${frontMockup.toString('base64')}`;
-    const backBase64 = `data:image/png;base64,${backMockup.toString('base64')}`;
+    // Convert to base64 (without data URL prefix)
+    const frontBase64 = frontMockup.toString('base64');
+    const backBase64 = backMockup.toString('base64');
     
     console.log('✅ [SIMPLE-MOCKUP] Base64 conversion completed');
     

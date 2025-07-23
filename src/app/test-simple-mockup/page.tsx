@@ -7,8 +7,7 @@ interface SimpleMockupResponse {
   success: boolean;
   mockups: {
     type: 'tshirt-front' | 'tshirt-back';
-    buffer: Buffer;
-    filename: string;
+    base64: string;
   }[];
   error?: string;
 }
@@ -71,16 +70,13 @@ export default function TestSimpleMockupPage() {
     }
   };
 
-  const downloadMockup = (buffer: Buffer, filename: string) => {
-    const blob = new Blob([buffer], { type: 'image/png' });
-    const url = URL.createObjectURL(blob);
+  const downloadMockup = (base64: string, type: string) => {
     const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
+    link.href = base64;
+    link.download = `${formData.company}-${type}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -181,7 +177,7 @@ export default function TestSimpleMockupPage() {
                       {mockup.type.replace('-', ' ')}
                     </h3>
                     <button
-                      onClick={() => downloadMockup(mockup.buffer, mockup.filename)}
+                      onClick={() => downloadMockup(mockup.base64, mockup.type)}
                       className="flex items-center text-blue-600 hover:text-blue-800 text-sm"
                     >
                       <Download className="h-4 w-4 mr-1" />
@@ -190,7 +186,7 @@ export default function TestSimpleMockupPage() {
                   </div>
                   <div className="text-center">
                     <img 
-                      src={`data:image/png;base64,${Buffer.from(mockup.buffer).toString('base64')}`}
+                      src={mockup.base64}
                       alt={`${mockup.type} mockup`}
                       className="max-w-full h-auto max-h-80 border border-gray-300 rounded"
                       onError={(e) => {
@@ -199,7 +195,7 @@ export default function TestSimpleMockupPage() {
                     />
                   </div>
                   <div className="mt-2 text-xs text-gray-500">
-                    Buffer size: {mockup.buffer.length} bytes
+                    Base64 length: {mockup.base64.length} characters
                   </div>
                 </div>
               ))}

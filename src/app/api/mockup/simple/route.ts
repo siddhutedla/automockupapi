@@ -15,8 +15,7 @@ interface SimpleMockupResponse {
   success: boolean;
   mockups: {
     type: 'tshirt-front' | 'tshirt-back';
-    buffer: Buffer;
-    filename: string;
+    base64: string;
   }[];
   error?: string;
 }
@@ -172,12 +171,24 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
       console.log('❌ [SIMPLE-MOCKUP] Font file not found!', error);
     }
     
-    registerFont(fontPath, { family: 'RobotoMono' });
+    // Try to register font, but fallback to system fonts if it fails
+    try {
+      registerFont(fontPath, { family: 'RobotoMono' });
+      console.log('✅ [SIMPLE-MOCKUP] Font registered successfully');
+    } catch (fontError) {
+      console.log('⚠️ [SIMPLE-MOCKUP] Font registration failed, using system font:', fontError);
+    }
     
     // Create temporary canvas to measure text width
     const tempCanvas = createCanvas(1, 1);
     const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.font = '16px RobotoMono';
+    
+    // Try custom font first, fallback to system font
+    try {
+      tempCtx.font = '16px RobotoMono';
+    } catch {
+      tempCtx.font = '16px Arial, sans-serif';
+    }
     
     // Measure actual text width
     const metrics = tempCtx.measureText(companyName);
@@ -194,8 +205,12 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
     // Transparent background
     ctx.clearRect(0, 0, textWidth, textHeight);
     
-    // Set font
-    ctx.font = '16px RobotoMono';
+    // Set font with fallback
+    try {
+      ctx.font = '16px RobotoMono';
+    } catch {
+      ctx.font = '16px Arial, sans-serif';
+    }
     ctx.fillStyle = 'black';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -223,26 +238,15 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
     
     console.log('✅ [SIMPLE-MOCKUP] Back mockup generated, size:', backMockup.length, 'bytes');
     
-    // Convert to binary buffers
-    const frontBuffer = frontMockup;
-    const backBuffer = backMockup;
+    // Convert to base64
+    const frontBase64 = frontMockup.toString('base64');
+    const backBase64 = backMockup.toString('base64');
     
-    console.log('✅ [SIMPLE-MOCKUP] Binary conversion completed');
-    
-    // Create clean company name for filename (remove special characters)
-    const cleanCompanyName = companyName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+    console.log('✅ [SIMPLE-MOCKUP] Base64 conversion completed');
     
     mockups.push(
-      { 
-        type: 'tshirt-front' as const, 
-        buffer: frontBuffer,
-        filename: `${cleanCompanyName}-tshirt-front.png`
-      },
-      { 
-        type: 'tshirt-back' as const, 
-        buffer: backBuffer,
-        filename: `${cleanCompanyName}-tshirt-back.png`
-      }
+      { type: 'tshirt-front' as const, base64: frontBase64 },
+      { type: 'tshirt-back' as const, base64: backBase64 }
     );
     
     console.log('✅ [SIMPLE-MOCKUP] Mockup generation completed successfully');

@@ -4,6 +4,7 @@ import { ZohoClientKV } from '@/lib/zoho-client-kv';
 import sharp from 'sharp';
 import { join } from 'path';
 import { writeFile as writeFileAsync, readFile } from 'fs/promises';
+import { createCanvas, registerFont } from 'canvas';
 
 interface SimpleMockupRequest {
   company: string;
@@ -153,36 +154,31 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
       .png()
       .toBuffer();
     
-    // Create company name text using embedded font approach
+    // Create company name text using canvas approach
     const textWidth = companyName.length * 12;
     const textHeight = 35;
     
-    // Read and encode the font file
+    // Register the font
     const fontPath = join(process.cwd(), 'public', 'RobotoMono.ttf');
-    const fontData = await fs.readFile(fontPath);
-    const fontBase64 = fontData.toString('base64');
+    registerFont(fontPath, { family: 'RobotoMono' });
     
-    const svgText = `
-      <svg width="${textWidth}" height="${textHeight}" xmlns="http://www.w3.org/2000/svg">
-        <style>
-          @font-face {
-            font-family: 'RobotoMono';
-            src: url('data:font/ttf;base64,${fontBase64}') format('truetype');
-          }
-          text {
-            font-family: 'RobotoMono';
-          }
-        </style>
-        <text x="50%" y="20" font-size="16" fill="black" text-anchor="middle">${companyName}</text>
-      </svg>
-    `;
+    // Create canvas and context
+    const canvas = createCanvas(textWidth, textHeight);
+    const ctx = canvas.getContext('2d');
     
-    const svgBuffer = Buffer.from(svgText);
+    // Transparent background
+    ctx.clearRect(0, 0, textWidth, textHeight);
     
-    // Use svgBuffer directly to create an image with sharp
-    const companyText = await sharp(svgBuffer)
-      .png()
-      .toBuffer();
+    // Set font
+    ctx.font = '16px RobotoMono';
+    ctx.fillStyle = 'black';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Draw text centered
+    ctx.fillText(companyName, textWidth / 2, textHeight / 2);
+    
+    const companyText = canvas.toBuffer(); // Ready to composite
     
     const backMockup = await sharp(backShirtTemplate)
       .composite([

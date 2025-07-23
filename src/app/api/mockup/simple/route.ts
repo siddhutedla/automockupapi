@@ -1,259 +1,119 @@
-import { NextRequest } from 'next/server';
-import { ApiResponseHandler, generateRequestId, validateRequiredFields } from '@/lib/api-response';
-import { ZohoClientKV } from '@/lib/zoho-client-kv';
-import sharp from 'sharp';
-import { join } from 'path';
-import { writeFile as writeFileAsync, readFile, access, stat } from 'fs/promises';
-import { createCanvas, registerFont } from 'canvas';
+import { NextRequest, NextResponse } from 'next/server';
+import { createCanvas, loadImage, registerFont } from 'canvas';
+import path from 'path';
+import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
 
-interface SimpleMockupRequest {
-  company: string;
-  leadID: string;
+// Register the Roboto Mono font
+const fontPath = path.join(process.cwd(), 'public', 'RobotoMono.ttf');
+if (fs.existsSync(fontPath)) {
+  registerFont(fontPath, { family: 'Roboto Mono' });
 }
 
-interface SimpleMockupResponse {
-  success: boolean;
-  mockups: {
-    type: 'tshirt-front' | 'tshirt-back';
-    base64: string;
-  }[];
-  error?: string;
+// Ensure temp directory exists
+const tempDir = path.join(process.cwd(), 'public', 'temp');
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+}
+
+// Cleanup function to remove old files
+function cleanupOldFiles() {
+  const files = fs.readdirSync(tempDir);
+  const now = Date.now();
+  const twoMinutes = 2 * 60 * 1000; // 2 minutes in milliseconds
+  
+  files.forEach(file => {
+    const filePath = path.join(tempDir, file);
+    const stats = fs.statSync(filePath);
+    if (now - stats.mtime.getTime() > twoMinutes) {
+      fs.unlinkSync(filePath);
+    }
+  });
 }
 
 export async function POST(request: NextRequest) {
-  const requestId = generateRequestId();
-  
   try {
-    const body: SimpleMockupRequest = await request.json();
-    
-    console.log('Simple Mockup API received:', body);
-    
-    // Validate required fields
-    const requiredFields = ['company', 'leadID'];
-    const validationErrors = validateRequiredFields(body, requiredFields);
-    
-    if (validationErrors.length > 0) {
-      console.log('Validation errors:', validationErrors);
-      return ApiResponseHandler.validationError(validationErrors, requestId);
+    const body = await request.json();
+    const { imageUrl: inputImageUrl, companyName = 'COMPANY NAME' } = body;
+
+    if (!inputImageUrl) {
+      return NextResponse.json({ error: 'Image URL is required' }, { status: 400 });
     }
 
-    // Create KV-based Zoho client (same as test-lead API)
-    const zohoClient = new ZohoClientKV();
-    
-    // Get lead data
-    const lead = await zohoClient.getLead(body.leadID);
-    
-    if (!lead) {
-      return ApiResponseHandler.error('Lead not found', 404, requestId);
-    }
+    // Cleanup old files first
+    cleanupOldFiles();
 
-    // Download lead photo
-    let logoBuffer: Buffer;
-    try {
-      logoBuffer = await zohoClient.downloadLeadPhoto(body.leadID);
-      console.log('✅ [SIMPLE-MOCKUP] Lead photo downloaded, size:', logoBuffer.length, 'bytes');
-    } catch (error) {
-      console.error('Failed to download lead photo:', error);
-      return ApiResponseHandler.error('Failed to download lead photo', 500, requestId);
-    }
+    // Load the base image
+    const baseImage = await loadImage(inputImageUrl);
+    const logoImage = await loadImage('https://via.placeholder.com/100x100/FF0000/FFFFFF?text=LOGO');
     
-    // Simple mockup generation - directly place logo on t-shirt templates
-    const mockups = await generateSimpleMockups(logoBuffer, body.company);
-    
-    const response: SimpleMockupResponse = {
-      success: true,
-      mockups
-    };
+    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+    const mockups = [];
 
-    return ApiResponseHandler.success(
-      response,
-      'Mockups generated successfully',
-      requestId
-    );
+    // Generate front mockup
+    const frontCanvas = createCanvas(baseImage.width, baseImage.height);
+    const frontCtx = frontCanvas.getContext('2d');
+    
+    // Draw the base image
+    frontCtx.drawImage(baseImage, 0, 0);
+    
+    // Front logo: right chest, smaller
+    const frontLogoWidth = 60;
+    const frontLogoHeight = 60;
+    const frontX = baseImage.width * 0.75; // Right side
+    const frontY = baseImage.height * 0.3; // Upper chest area
+    frontCtx.drawImage(logoImage, frontX - frontLogoWidth/2, frontY - frontLogoHeight/2, frontLogoWidth, frontLogoHeight);
+    
+    // Save front mockup
+    const frontBuffer = frontCanvas.toBuffer('image/png');
+    const frontFilename = `${uuidv4()}.png`;
+    const frontFilePath = path.join(tempDir, frontFilename);
+    fs.writeFileSync(frontFilePath, frontBuffer);
+    
+    mockups.push({
+      type: 'front',
+      imageUrl: `${baseUrl}/temp/${frontFilename}`
+    });
+
+    // Generate back mockup
+    const backCanvas = createCanvas(baseImage.width, baseImage.height);
+    const backCtx = backCanvas.getContext('2d');
+    
+    // Draw the base image
+    backCtx.drawImage(baseImage, 0, 0);
+    
+    // Back logo: centered, smaller
+    const backLogoWidth = 80;
+    const backLogoHeight = 80;
+    const backX = baseImage.width * 0.5;
+    const backY = baseImage.height * 0.4;
+    backCtx.drawImage(logoImage, backX - backLogoWidth/2, backY - backLogoHeight/2, backLogoWidth, backLogoHeight);
+
+    // Add company name underneath
+    backCtx.font = '24px "Roboto Mono", monospace';
+    backCtx.fillStyle = '#000000';
+    backCtx.textAlign = 'center';
+    backCtx.fillText(companyName, backX, backY + backLogoHeight/2 + 40);
+    
+    // Save back mockup
+    const backBuffer = backCanvas.toBuffer('image/png');
+    const backFilename = `${uuidv4()}.png`;
+    const backFilePath = path.join(tempDir, backFilename);
+    fs.writeFileSync(backFilePath, backBuffer);
+    
+    mockups.push({
+      type: 'back',
+      imageUrl: `${baseUrl}/temp/${backFilename}`
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      mockups,
+      message: 'Mockups generated successfully. Images will be available for 2 minutes.'
+    });
 
   } catch (error) {
-    console.error('Simple mockup generation error:', error);
-    return ApiResponseHandler.serverError('Mockup generation failed', requestId);
-  }
-}
-
-async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
-  console.log('🎨 [SIMPLE-MOCKUP] Starting mockup generation...');
-  console.log('🎨 [SIMPLE-MOCKUP] Logo buffer size:', logoBuffer.length, 'bytes');
-  console.log('🎨 [SIMPLE-MOCKUP] Company name:', companyName);
-  
-  const mockups = [];
-  
-  // T-shirt templates
-  const frontTemplate = join(process.cwd(), 'public', 'whiteshirtfront.jpg');
-  const backTemplate = join(process.cwd(), 'public', 'whitetshirtback.jpg');
-  
-  console.log('🎨 [SIMPLE-MOCKUP] Template paths:', { frontTemplate, backTemplate });
-  
-  // Check if templates exist
-  const fs = await import('fs/promises');
-  try {
-    await fs.access(frontTemplate);
-    await fs.access(backTemplate);
-    console.log('✅ [SIMPLE-MOCKUP] Template files found');
-  } catch (error) {
-    console.error('❌ [SIMPLE-MOCKUP] Template files not found:', error);
-    throw new Error('T-shirt templates not found. Please ensure whiteshirtfront.jpg and whitetshirtback.jpg exist in the public directory.');
-  }
-  
-  try {
-    // Process logo for placement - using the same approach as main mockup generator
-    console.log('🎨 [SIMPLE-MOCKUP] Processing logo...');
-    const processedLogo = await sharp(logoBuffer)
-      .resize(120, 120, { fit: 'inside', withoutEnlargement: true }) // Medium size like main generator
-      .png()
-      .toBuffer();
-    
-    console.log('✅ [SIMPLE-MOCKUP] Logo processed, size:', processedLogo.length, 'bytes');
-    
-    // Get template metadata like main generator
-    const templateMetadata = await sharp(frontTemplate).metadata();
-    const width = templateMetadata.width || 800;
-    const height = templateMetadata.height || 1000;
-    
-    // Load and process shirt templates like main generator
-    const frontShirtTemplate = await sharp(frontTemplate)
-      .resize(800, 1000, { fit: 'inside', withoutEnlargement: true })
-      .png()
-      .toBuffer();
-    
-    const backShirtTemplate = await sharp(backTemplate)
-      .resize(800, 1000, { fit: 'inside', withoutEnlargement: true })
-      .png()
-      .toBuffer();
-    
-    // Generate front mockup - logo on right chest, smaller size
-    console.log('🎨 [SIMPLE-MOCKUP] Generating front mockup...');
-    const frontLogo = await sharp(logoBuffer)
-      .resize(50, 50, { fit: 'inside', withoutEnlargement: true }) // Even smaller for right chest
-      .png()
-      .toBuffer();
-    
-    const frontMockup = await sharp(frontShirtTemplate)
-      .composite([
-        {
-          input: frontLogo,
-          top: Math.round(height * 0.25), // Better chest position
-          left: width - 190  // Right side margin
-        }
-      ])
-      .png()
-      .toBuffer();
-    
-    console.log('✅ [SIMPLE-MOCKUP] Front mockup generated, size:', frontMockup.length, 'bytes');
-    
-    // Generate back mockup - logo in middle, smaller with company name
-    console.log('🎨 [SIMPLE-MOCKUP] Generating back mockup...');
-    const backLogo = await sharp(logoBuffer)
-      .resize(100, 100, { fit: 'inside', withoutEnlargement: true }) // Smaller logo
-      .png()
-      .toBuffer();
-    
-    // Create company name text using canvas approach with dynamic width
-    const textHeight = 20;
-    
-    // Register the font with proper checking
-    const fontPath = join(process.cwd(), 'public', 'RobotoMono.ttf');
-    
-    // Check if font file exists and get its size
-    console.log('🎨 [SIMPLE-MOCKUP] Font path:', fontPath);
-    try {
-      await access(fontPath);
-      console.log('🎨 [SIMPLE-MOCKUP] Font exists?', true);
-      const fontStats = await stat(fontPath);
-      console.log('🎨 [SIMPLE-MOCKUP] Font size:', fontStats.size, 'bytes');
-    } catch (error) {
-      console.log('❌ [SIMPLE-MOCKUP] Font file not found!', error);
-    }
-    
-    // Try to register font, but fallback to system fonts if it fails
-    try {
-      registerFont(fontPath, { family: 'RobotoMono' });
-      console.log('✅ [SIMPLE-MOCKUP] Font registered successfully');
-    } catch (fontError) {
-      console.log('⚠️ [SIMPLE-MOCKUP] Font registration failed, using system font:', fontError);
-    }
-    
-    // Create temporary canvas to measure text width
-    const tempCanvas = createCanvas(1, 1);
-    const tempCtx = tempCanvas.getContext('2d');
-    
-    // Try custom font first, fallback to system font
-    try {
-      tempCtx.font = '16px RobotoMono';
-    } catch {
-      tempCtx.font = '16px Arial, sans-serif';
-    }
-    
-    // Measure actual text width
-    const metrics = tempCtx.measureText(companyName);
-    const textWidth = metrics.width + 20; // Add padding
-    
-    console.log('🎨 [SIMPLE-MOCKUP] Company name:', companyName);
-    console.log('🎨 [SIMPLE-MOCKUP] Measured text width:', metrics.width);
-    console.log('🎨 [SIMPLE-MOCKUP] Final canvas width:', textWidth);
-    
-    // Create canvas and context with measured width
-    const canvas = createCanvas(textWidth, textHeight);
-    const ctx = canvas.getContext('2d');
-    
-    // Transparent background
-    ctx.clearRect(0, 0, textWidth, textHeight);
-    
-    // Set font with fallback
-    try {
-      ctx.font = '16px RobotoMono';
-    } catch {
-      ctx.font = '16px Arial, sans-serif';
-    }
-    ctx.fillStyle = 'black';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    // Draw text centered
-    ctx.fillText(companyName, textWidth / 2, textHeight / 2);
-    
-    const companyText = canvas.toBuffer(); // Ready to composite
-    
-    const backMockup = await sharp(backShirtTemplate)
-      .composite([
-        {
-          input: backLogo,
-          top: Math.round(height * 0.22), // Center vertically
-          left: Math.round((width - 100) / 2)  // Center horizontally
-        },
-        {
-          input: companyText,
-          top: Math.round(height * 0.39), // Below the logo
-          left: Math.round((width - textWidth) / 2)  // Center horizontally
-        }
-      ])
-      .png()
-      .toBuffer();
-    
-    console.log('✅ [SIMPLE-MOCKUP] Back mockup generated, size:', backMockup.length, 'bytes');
-    
-    // Convert to base64
-    const frontBase64 = frontMockup.toString('base64');
-    const backBase64 = backMockup.toString('base64');
-    
-    console.log('✅ [SIMPLE-MOCKUP] Base64 conversion completed');
-    
-    mockups.push(
-      { type: 'tshirt-front' as const, base64: frontBase64 },
-      { type: 'tshirt-back' as const, base64: backBase64 }
-    );
-    
-    console.log('✅ [SIMPLE-MOCKUP] Mockup generation completed successfully');
-    return mockups;
-    
-  } catch (error) {
-    console.error('❌ [SIMPLE-MOCKUP] Error during mockup generation:', error);
-    throw new Error(`Mockup generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('Error generating mockup:', error);
+    return NextResponse.json({ error: 'Failed to generate mockup' }, { status: 500 });
   }
 } 

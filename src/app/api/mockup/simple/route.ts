@@ -153,13 +153,27 @@ async function generateSimpleMockups(logoBuffer: Buffer, companyName: string) {
       .png()
       .toBuffer();
     
-    // Create company name text using SVG buffer approach
+    // Create company name text using embedded font approach
     const textWidth = companyName.length * 12;
-    const textHeight = 30;
+    const textHeight = 35;
+    
+    // Read and encode the font file
+    const fontPath = join(process.cwd(), 'public', 'RobotoMono.ttf');
+    const fontData = await fs.readFile(fontPath);
+    const fontBase64 = fontData.toString('base64');
     
     const svgText = `
       <svg width="${textWidth}" height="${textHeight}" xmlns="http://www.w3.org/2000/svg">
-        <text x="50%" y="20" font-family="monospace" font-size="16" fill="black" text-anchor="middle">${companyName}</text>
+        <style>
+          @font-face {
+            font-family: 'RobotoMono';
+            src: url('data:font/ttf;base64,${fontBase64}') format('truetype');
+          }
+          text {
+            font-family: 'RobotoMono';
+          }
+        </style>
+        <text x="50%" y="20" font-size="16" fill="black" text-anchor="middle">${companyName}</text>
       </svg>
     `;
     

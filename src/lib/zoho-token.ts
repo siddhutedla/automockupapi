@@ -1,5 +1,3 @@
-import { createClient } from 'redis';
-
 interface TokenResponse {
   access_token: string;
   refresh_token: string;
@@ -13,42 +11,37 @@ interface RefreshError {
   error_description?: string;
 }
 
-let redisClient: ReturnType<typeof createClient> | null = null;
-
-async function getRedisClient() {
-  if (!redisClient) {
-    redisClient = createClient({
-      url: process.env.REDIS_URL
-    });
-    await redisClient.connect();
-  }
-  return redisClient;
+interface CachedToken {
+  token: string;
+  expiresAt: number;
 }
 
+// Simple in-memory token cache
+let tokenCache: CachedToken | null = null;
+
 /**
- * Get Zoho access token from Redis or refresh if needed
+ * Get Zoho access token from cache or refresh if needed
  */
 export async function getZohoAccessToken(): Promise<string> {
   try {
-    const redis = await getRedisClient();
-    
-    // STEP 1: Try to get from Redis
-    const token = await redis.get('zoho_access_token');
-
-    if (token) {
-      console.log('✅ [ZOHO-TOKEN] Found valid token in Redis');
-      return token; // ✅ Found in Redis, return it
+    // STEP 1: Check if we have a valid cached token
+    if (tokenCache && Date.now() < tokenCache.expiresAt) {
+      console.log('✅ [ZOHO-TOKEN] Found valid token in cache');
+      return tokenCache.token;
     }
 
-    console.log('🔄 [ZOHO-TOKEN] No token in Redis, refreshing...');
+    console.log('🔄 [ZOHO-TOKEN] No valid token in cache, refreshing...');
 
     // STEP 2: Not found or expired, refresh it
     const newToken = await refreshAccessToken();
 
-    // STEP 3: Save it back to Redis with 1 hour expiry
-    await redis.setEx('zoho_access_token', 3600, newToken);
+    // STEP 3: Cache the token with 1 hour expiry
+    tokenCache = {
+      token: newToken,
+      expiresAt: Date.now() + (3600 * 1000) // 1 hour from now
+    };
 
-    console.log('✅ [ZOHO-TOKEN] New token saved to Redis');
+    console.log('✅ [ZOHO-TOKEN] New token cached');
     return newToken;
   } catch (error) {
     console.error('❌ [ZOHO-TOKEN] Error getting access token:', error);
@@ -118,33 +111,31 @@ async function refreshAccessToken(): Promise<string> {
  */
 export async function clearZohoAccessToken(): Promise<void> {
   try {
-    const redis = await getRedisClient();
-    await redis.del('zoho_access_token');
-    console.log('✅ [ZOHO-TOKEN] Access token cleared from Redis');
+    tokenCache = null;
+    console.log('✅ [ZOHO-TOKEN] Access token cleared from cache');
   } catch (error) {
     console.error('❌ [ZOHO-TOKEN] Error clearing access token:', error);
   }
 }
 
 /**
- * Get token status from Redis
+ * Get token status
  */
 export async function getZohoTokenStatus(): Promise<{
   hasToken: boolean;
   hasRedisUrl: boolean;
 }> {
   try {
-    const redis = await getRedisClient();
-    const token = await redis.get('zoho_access_token');
+    const hasValidToken = !!(tokenCache && Date.now() < tokenCache.expiresAt);
 
     return {
-      hasToken: !!token,
-      hasRedisUrl: !!process.env.REDIS_URL,
+      hasToken: hasValidToken,
+      hasRedisUrl: false, // No longer using Redis
     };
   } catch {
     return {
       hasToken: false,
-      hasRedisUrl: !!process.env.REDIS_URL,
+      hasRedisUrl: false,
     };
   }
 } 

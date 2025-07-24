@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createCanvas, loadImage, registerFont } from 'canvas';
 import path from 'path';
 import fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
 import { ZohoClientKV } from '@/lib/zoho-client-kv';
+import { kv } from '@vercel/kv';
+import { v4 as uuidv4 } from 'uuid';
 
 // Register the Roboto Mono font
 const fontPath = path.join(process.cwd(), 'public', 'RobotoMono.ttf');
@@ -11,24 +12,15 @@ if (fs.existsSync(fontPath)) {
   registerFont(fontPath, { family: 'Roboto Mono' });
 }
 
-// Ensure temp directory exists
-const tempDir = path.join(process.cwd(), 'public', 'temp');
-if (!fs.existsSync(tempDir)) {
-  fs.mkdirSync(tempDir, { recursive: true });
-}
-
-// Cleanup function to remove old files
-function cleanupOldFiles() {
-  const files = fs.readdirSync(tempDir);
-  const now = Date.now();
-  const twoMinutes = 2 * 60 * 1000; // 2 minutes in milliseconds
-  
-  files.forEach(file => {
-    const filePath = path.join(tempDir, file);
-    const stats = fs.statSync(filePath);
-    if (now - stats.mtime.getTime() > twoMinutes) {
-      fs.unlinkSync(filePath);
-    }
+// Handle CORS preflight requests
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
   });
 }
 
@@ -40,9 +32,6 @@ export async function POST(request: NextRequest) {
     if (!company || !leadID) {
       return NextResponse.json({ error: 'Company and LeadID are required' }, { status: 400 });
     }
-
-    // Cleanup old files first
-    cleanupOldFiles();
 
     // Create Zoho client and get lead data
     const zohoClient = new ZohoClientKV();
@@ -91,15 +80,17 @@ export async function POST(request: NextRequest) {
     const frontY = frontTemplate.height * 0.3; // Upper chest area
     frontCtx.drawImage(logoImage, frontX - frontLogoWidth/2, frontY - frontLogoHeight/2, frontLogoWidth, frontLogoHeight);
     
-    // Save front mockup
+    // Convert front mockup to base64 and store in Redis
     const frontBuffer = frontCanvas.toBuffer('image/png');
-    const frontFilename = `${uuidv4()}.png`;
-    const frontFilePath = path.join(tempDir, frontFilename);
-    fs.writeFileSync(frontFilePath, frontBuffer);
+    const frontBase64 = frontBuffer.toString('base64');
+    const frontId = uuidv4();
+    
+    // Store in Redis with 2-minute expiration
+    await kv.set(`mockup:${frontId}`, frontBase64, { ex: 120 }); // 120 seconds = 2 minutes
     
     mockups.push({
       type: 'front',
-      imageUrl: `${baseUrl}/temp/${frontFilename}`
+      imageUrl: `${baseUrl}/api/mockup/image/${frontId}`
     });
 
     // Generate back mockup
@@ -123,15 +114,17 @@ export async function POST(request: NextRequest) {
     backCtx.textAlign = 'center';
     backCtx.fillText(company, backX, backY + backLogoHeight/2 + 40);
     
-    // Save back mockup
+    // Convert back mockup to base64 and store in Redis
     const backBuffer = backCanvas.toBuffer('image/png');
-    const backFilename = `${uuidv4()}.png`;
-    const backFilePath = path.join(tempDir, backFilename);
-    fs.writeFileSync(backFilePath, backBuffer);
+    const backBase64 = backBuffer.toString('base64');
+    const backId = uuidv4();
+    
+    // Store in Redis with 2-minute expiration
+    await kv.set(`mockup:${backId}`, backBase64, { ex: 120 }); // 120 seconds = 2 minutes
     
     mockups.push({
       type: 'back',
-      imageUrl: `${baseUrl}/temp/${backFilename}`
+      imageUrl: `${baseUrl}/api/mockup/image/${backId}`
     });
 
     return NextResponse.json({ 

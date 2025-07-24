@@ -3,8 +3,28 @@ import { createCanvas, loadImage, registerFont } from 'canvas';
 import path from 'path';
 import fs from 'fs';
 import { ZohoClientKV } from '@/lib/zoho-client-kv';
-import { kv } from '@vercel/kv';
 import { v4 as uuidv4 } from 'uuid';
+import { createClient, RedisClientType } from 'redis';
+
+// Try to create Redis client, but don't fail if not available
+let redisClient: RedisClientType | null = null;
+try {
+  if (process.env.REDIS_URL) {
+    redisClient = createClient({
+      url: process.env.REDIS_URL
+    });
+    redisClient.connect().catch((err: Error) => {
+      console.log('⚠️ Redis connection failed:', err.message);
+      redisClient = null;
+    });
+    console.log('✅ Redis client created');
+  } else {
+    console.log('⚠️ REDIS_URL not found, will use base64 fallback');
+  }
+} catch (error) {
+  console.log('⚠️ Redis client creation failed, will use base64 fallback');
+  redisClient = null;
+}
 
 // Register the Roboto Mono font (optional)
 try {
@@ -19,8 +39,27 @@ try {
   console.log('⚠️ Font registration failed, using system font:', error);
 }
 
+// Create a simple placeholder logo using canvas
+function createPlaceholderLogo(): Buffer {
+  const canvas = createCanvas(100, 100);
+  const ctx = canvas.getContext('2d');
+  
+  // Red background
+  ctx.fillStyle = '#FF0000';
+  ctx.fillRect(0, 0, 100, 100);
+  
+  // White text
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '16px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('LOGO', 50, 50);
+  
+  return canvas.toBuffer('image/png');
+}
+
 // Handle CORS preflight requests
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
@@ -65,8 +104,8 @@ export async function POST(request: NextRequest) {
         throw new Error('Failed to get lead data');
       }
       
-      if (!lead) {
-        throw new Error('Lead not found');
+      if (!lead || Object.keys(lead).length === 0) {
+        throw new Error('Lead not found or has no data');
       }
 
       // Download lead photo
@@ -80,14 +119,11 @@ export async function POST(request: NextRequest) {
       }
     } catch (error) {
       console.log('⚠️ Using placeholder logo due to Zoho error:', error);
-      // Use placeholder logo
-      const placeholderResponse = await fetch('https://via.placeholder.com/100x100/FF0000/FFFFFF?text=LOGO');
-      const placeholderArrayBuffer = await placeholderResponse.arrayBuffer();
-      logoBuffer = Buffer.from(placeholderArrayBuffer);
+      // Use generated placeholder logo
+      logoBuffer = createPlaceholderLogo();
       logoSource = 'placeholder';
     }
 
-    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
     const mockups = [];
 
     // Generate front mockup
@@ -108,19 +144,10 @@ export async function POST(request: NextRequest) {
     const frontY = frontTemplate.height * 0.3; // Upper chest area
     frontCtx.drawImage(logoImage, frontX - frontLogoWidth/2, frontY - frontLogoHeight/2, frontLogoWidth, frontLogoHeight);
     
-    // Convert front mockup to base64 and store in Redis
+    // Convert front mockup to base64
     const frontBuffer = frontCanvas.toBuffer('image/png');
-    const frontBase64 = frontBuffer.toString('base64');
-    const frontId = uuidv4();
+    const frontBase64 = `data:image/png;base64,${frontBuffer.toString('base64')}`;
     
-    // Store in Redis with 2-minute expiration
-    await kv.set(`mockup:${frontId}`, frontBase64, { ex: 120 }); // 120 seconds = 2 minutes
-    
-    mockups.push({
-      type: 'front',
-      imageUrl: `${baseUrl}/api/mockup/image/${frontId}`
-    });
-
     // Generate back mockup
     const backTemplate = await loadImage(backTemplatePath);
     const backCanvas = createCanvas(backTemplate.width, backTemplate.height);
@@ -146,24 +173,54 @@ export async function POST(request: NextRequest) {
     backCtx.textAlign = 'center';
     backCtx.fillText(company, backX, backY + backLogoHeight/2 + 40);
     
-    // Convert back mockup to base64 and store in Redis
+    // Convert back mockup to base64
     const backBuffer = backCanvas.toBuffer('image/png');
-    const backBase64 = backBuffer.toString('base64');
-    const backId = uuidv4();
-    
-    // Store in Redis with 2-minute expiration
-    await kv.set(`mockup:${backId}`, backBase64, { ex: 120 }); // 120 seconds = 2 minutes
-    
-    mockups.push({
-      type: 'back',
-      imageUrl: `${baseUrl}/api/mockup/image/${backId}`
-    });
+    const backBase64 = `data:image/png;base64,${backBuffer.toString('base64')}`;
 
-    return NextResponse.json({ 
-      success: true, 
-      mockups,
-      message: `Mockups generated successfully using ${logoSource} logo. Images will be available for 2 minutes.`
-    });
+    // If Redis is available, use it for temporary URLs
+    if (redisClient && redisClient.isReady) {
+      const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+      
+      const frontId = uuidv4();
+      const backId = uuidv4();
+      
+      // Store in Redis with 2-minute expiration
+      await redisClient.setEx(`mockup:${frontId}`, 120, frontBuffer.toString('base64')); // 120 seconds = 2 minutes
+      await redisClient.setEx(`mockup:${backId}`, 120, backBuffer.toString('base64')); // 120 seconds = 2 minutes
+      
+      mockups.push({
+        type: 'front',
+        imageUrl: `${baseUrl}/api/mockup/image/${frontId}`
+      });
+      
+      mockups.push({
+        type: 'back',
+        imageUrl: `${baseUrl}/api/mockup/image/${backId}`
+      });
+      
+      return NextResponse.json({ 
+        success: true, 
+        mockups,
+        message: `Mockups generated successfully using ${logoSource} logo. Images will be available for 2 minutes.`
+      });
+    } else {
+      // Fallback to base64
+      mockups.push({
+        type: 'front',
+        base64: frontBase64
+      });
+      
+      mockups.push({
+        type: 'back',
+        base64: backBase64
+      });
+      
+      return NextResponse.json({ 
+        success: true, 
+        mockups,
+        message: `Mockups generated successfully using ${logoSource} logo. (Base64 mode - Redis not available)`
+      });
+    }
 
   } catch (error) {
     console.error('Error generating mockup:', error);

@@ -61,6 +61,19 @@ export interface MockupResponse {
   createdAt: string;
 }
 
+export interface SimpleMockup {
+  type: 'front' | 'back';
+  imageUrl?: string;
+  base64?: string;
+}
+
+export interface SimpleMockupResponse {
+  success: boolean;
+  mockups: SimpleMockup[];
+  message: string;
+  error?: string;
+}
+
 export interface UploadResponse {
   success: boolean;
   url?: string;

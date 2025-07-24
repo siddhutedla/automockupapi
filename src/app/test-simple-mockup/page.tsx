@@ -1,22 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-
-interface Mockup {
-  type: 'front' | 'back';
-  imageUrl: string;
-}
-
-interface MockupResponse {
-  success: boolean;
-  mockups: Mockup[];
-  message: string;
-  error?: string;
-}
+import { SimpleMockup, SimpleMockupResponse } from '@/types';
 
 export default function TestSimpleMockup() {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<MockupResponse | null>(null);
+  const [result, setResult] = useState<SimpleMockupResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const testMockup = async () => {
@@ -50,6 +39,15 @@ export default function TestSimpleMockup() {
     }
   };
 
+  const getImageSrc = (mockup: SimpleMockup) => {
+    if (mockup.imageUrl) {
+      return mockup.imageUrl; // Redis URL
+    } else if (mockup.base64) {
+      return mockup.base64; // Base64 data URL
+    }
+    return '';
+  };
+
   return (
     <div className="container mx-auto p-8">
       <h1 className="text-3xl font-bold mb-8">Test Simple Mockup API</h1>
@@ -74,14 +72,19 @@ export default function TestSimpleMockup() {
           <p>{result.message}</p>
           
           <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {result.mockups.map((mockup: Mockup, index: number) => (
+            {result.mockups.map((mockup: SimpleMockup, index: number) => (
               <div key={index} className="bg-white p-4 rounded border">
                 <h4 className="font-bold mb-2 capitalize">{mockup.type} Mockup</h4>
                 <p className="text-sm text-gray-600 mb-2">
-                  <strong>Image URL:</strong> {mockup.imageUrl}
+                  <strong>Source:</strong> {mockup.imageUrl ? 'Redis URL' : 'Base64'}
                 </p>
+                {mockup.imageUrl && (
+                  <p className="text-xs text-gray-500 mb-2 break-all">
+                    URL: {mockup.imageUrl}
+                  </p>
+                )}
                 <img 
-                  src={mockup.imageUrl} 
+                  src={getImageSrc(mockup)} 
                   alt={`${mockup.type} mockup`}
                   className="border border-gray-300 rounded w-full"
                   style={{ maxHeight: '400px', objectFit: 'contain' }}

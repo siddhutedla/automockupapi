@@ -31,9 +31,8 @@ export default function TestSimpleMockup() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          imageUrl: 'https://via.placeholder.com/800x1000/FFFFFF/000000?text=T-SHIRT',
-          industry: 'apparel',
-          companyName: 'ACME CORP'
+          company: 'ACME CORP',
+          leadID: '6764494000001367215'
         }),
       });
 

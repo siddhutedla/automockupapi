@@ -3,6 +3,7 @@ import { createCanvas, loadImage, registerFont } from 'canvas';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
+import { ZohoClientKV } from '@/lib/zoho-client-kv';
 
 // Register the Roboto Mono font
 const fontPath = path.join(process.cwd(), 'public', 'RobotoMono.ttf');
@@ -34,34 +35,60 @@ function cleanupOldFiles() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { imageUrl: inputImageUrl, companyName = 'COMPANY NAME' } = body;
+    const { company, leadID } = body;
 
-    if (!inputImageUrl) {
-      return NextResponse.json({ error: 'Image URL is required' }, { status: 400 });
+    if (!company || !leadID) {
+      return NextResponse.json({ error: 'Company and LeadID are required' }, { status: 400 });
     }
 
     // Cleanup old files first
     cleanupOldFiles();
 
-    // Load the base image
-    const baseImage = await loadImage(inputImageUrl);
-    const logoImage = await loadImage('https://via.placeholder.com/100x100/FF0000/FFFFFF?text=LOGO');
+    // Create Zoho client and get lead data
+    const zohoClient = new ZohoClientKV();
+    const lead = await zohoClient.getLead(leadID);
     
+    if (!lead) {
+      return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
+    }
+
+    // Download lead photo
+    let logoBuffer: Buffer;
+    try {
+      logoBuffer = await zohoClient.downloadLeadPhoto(leadID);
+      console.log('✅ [SIMPLE-MOCKUP] Lead photo downloaded, size:', logoBuffer.length, 'bytes');
+    } catch (error) {
+      console.error('Failed to download lead photo:', error);
+      return NextResponse.json({ error: 'Failed to download lead photo' }, { status: 500 });
+    }
+
+    // Load t-shirt templates
+    const frontTemplatePath = path.join(process.cwd(), 'public', 'whiteshirtfront.jpg');
+    const backTemplatePath = path.join(process.cwd(), 'public', 'whitetshirtback.jpg');
+    
+    if (!fs.existsSync(frontTemplatePath) || !fs.existsSync(backTemplatePath)) {
+      return NextResponse.json({ error: 'T-shirt templates not found' }, { status: 500 });
+    }
+
     const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
     const mockups = [];
 
     // Generate front mockup
-    const frontCanvas = createCanvas(baseImage.width, baseImage.height);
+    const frontTemplate = await loadImage(frontTemplatePath);
+    const frontCanvas = createCanvas(frontTemplate.width, frontTemplate.height);
     const frontCtx = frontCanvas.getContext('2d');
     
-    // Draw the base image
-    frontCtx.drawImage(baseImage, 0, 0);
+    // Draw the base template
+    frontCtx.drawImage(frontTemplate, 0, 0);
+    
+    // Load and draw the logo
+    const logoImage = await loadImage(logoBuffer);
     
     // Front logo: right chest, smaller
     const frontLogoWidth = 60;
     const frontLogoHeight = 60;
-    const frontX = baseImage.width * 0.75; // Right side
-    const frontY = baseImage.height * 0.3; // Upper chest area
+    const frontX = frontTemplate.width * 0.75; // Right side
+    const frontY = frontTemplate.height * 0.3; // Upper chest area
     frontCtx.drawImage(logoImage, frontX - frontLogoWidth/2, frontY - frontLogoHeight/2, frontLogoWidth, frontLogoHeight);
     
     // Save front mockup
@@ -76,24 +103,25 @@ export async function POST(request: NextRequest) {
     });
 
     // Generate back mockup
-    const backCanvas = createCanvas(baseImage.width, baseImage.height);
+    const backTemplate = await loadImage(backTemplatePath);
+    const backCanvas = createCanvas(backTemplate.width, backTemplate.height);
     const backCtx = backCanvas.getContext('2d');
     
-    // Draw the base image
-    backCtx.drawImage(baseImage, 0, 0);
+    // Draw the base template
+    backCtx.drawImage(backTemplate, 0, 0);
     
     // Back logo: centered, smaller
     const backLogoWidth = 80;
     const backLogoHeight = 80;
-    const backX = baseImage.width * 0.5;
-    const backY = baseImage.height * 0.4;
+    const backX = backTemplate.width * 0.5;
+    const backY = backTemplate.height * 0.4;
     backCtx.drawImage(logoImage, backX - backLogoWidth/2, backY - backLogoHeight/2, backLogoWidth, backLogoHeight);
 
     // Add company name underneath
     backCtx.font = '24px "Roboto Mono", monospace';
     backCtx.fillStyle = '#000000';
     backCtx.textAlign = 'center';
-    backCtx.fillText(companyName, backX, backY + backLogoHeight/2 + 40);
+    backCtx.fillText(company, backX, backY + backLogoHeight/2 + 40);
     
     // Save back mockup
     const backBuffer = backCanvas.toBuffer('image/png');

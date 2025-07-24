@@ -61,10 +61,17 @@ export interface MockupResponse {
   createdAt: string;
 }
 
-export interface SimpleMockupRequest {
-  company: string;
-  leadID: string;
-  type?: 'front' | 'back';
+export interface SimpleMockup {
+  type: 'front' | 'back';
+  base64: string;
+  filename: string;
+}
+
+export interface SimpleMockupResponse {
+  success: boolean;
+  mockups: SimpleMockup[];
+  message: string;
+  error?: string;
 }
 
 export interface UploadResponse {

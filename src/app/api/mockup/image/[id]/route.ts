@@ -1,22 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, RedisClientType } from 'redis';
+import { createClient } from 'redis';
 
 // Create Redis client
-let redisClient: RedisClientType | null = null;
-try {
-  if (process.env.REDIS_URL) {
-    redisClient = createClient({
+let redisClient: ReturnType<typeof createClient> | null = null;
+
+async function initializeRedis() {
+  if (!process.env.REDIS_URL) {
+    console.log('⚠️ REDIS_URL not found');
+    return null;
+  }
+
+  try {
+    const client = createClient({
       url: process.env.REDIS_URL
     });
-    redisClient.connect().catch((err: Error) => {
-      console.log('⚠️ Redis connection failed:', err.message);
-      redisClient = null;
+
+    client.on('error', (err) => {
+      console.error('Redis Client Error:', err);
     });
+
+    await client.connect();
+    console.log('✅ Redis client connected successfully');
+    return client;
+  } catch (error) {
+    console.log('⚠️ Redis connection failed:', error);
+    return null;
   }
-} catch {
-  console.log('⚠️ Redis client creation failed');
-  redisClient = null;
 }
+
+// Initialize Redis on module load
+initializeRedis().then(client => {
+  redisClient = client;
+});
 
 export async function GET(
   request: NextRequest,

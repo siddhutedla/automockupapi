@@ -4,27 +4,39 @@ import path from 'path';
 import fs from 'fs';
 import { ZohoClientKV } from '@/lib/zoho-client-kv';
 import { v4 as uuidv4 } from 'uuid';
-import { createClient, RedisClientType } from 'redis';
+import { createClient } from 'redis';
 
 // Try to create Redis client, but don't fail if not available
-let redisClient: RedisClientType | null = null;
-try {
-  if (process.env.REDIS_URL) {
-    redisClient = createClient({
+let redisClient: ReturnType<typeof createClient> | null = null;
+
+async function initializeRedis() {
+  if (!process.env.REDIS_URL) {
+    console.log('⚠️ REDIS_URL not found, will use base64 fallback');
+    return null;
+  }
+
+  try {
+    const client = createClient({
       url: process.env.REDIS_URL
     });
-    redisClient.connect().catch((err: Error) => {
-      console.log('⚠️ Redis connection failed:', err.message);
-      redisClient = null;
+
+    client.on('error', (err) => {
+      console.error('Redis Client Error:', err);
     });
-    console.log('✅ Redis client created');
-  } else {
-    console.log('⚠️ REDIS_URL not found, will use base64 fallback');
+
+    await client.connect();
+    console.log('✅ Redis client connected successfully');
+    return client;
+  } catch (error) {
+    console.log('⚠️ Redis connection failed, will use base64 fallback:', error);
+    return null;
   }
-} catch (error) {
-  console.log('⚠️ Redis client creation failed, will use base64 fallback');
-  redisClient = null;
 }
+
+// Initialize Redis on module load
+initializeRedis().then(client => {
+  redisClient = client;
+});
 
 // Register the Roboto Mono font (optional)
 try {
@@ -177,50 +189,55 @@ export async function POST(request: NextRequest) {
     const backBuffer = backCanvas.toBuffer('image/png');
     const backBase64 = `data:image/png;base64,${backBuffer.toString('base64')}`;
 
-    // If Redis is available, use it for temporary URLs
+    // If Redis is available and connected, use it for temporary URLs
     if (redisClient && redisClient.isReady) {
       const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
       
       const frontId = uuidv4();
       const backId = uuidv4();
       
-      // Store in Redis with 2-minute expiration
-      await redisClient.setEx(`mockup:${frontId}`, 120, frontBuffer.toString('base64')); // 120 seconds = 2 minutes
-      await redisClient.setEx(`mockup:${backId}`, 120, backBuffer.toString('base64')); // 120 seconds = 2 minutes
-      
-      mockups.push({
-        type: 'front',
-        imageUrl: `${baseUrl}/api/mockup/image/${frontId}`
-      });
-      
-      mockups.push({
-        type: 'back',
-        imageUrl: `${baseUrl}/api/mockup/image/${backId}`
-      });
-      
-      return NextResponse.json({ 
-        success: true, 
-        mockups,
-        message: `Mockups generated successfully using ${logoSource} logo. Images will be available for 2 minutes.`
-      });
-    } else {
-      // Fallback to base64
-      mockups.push({
-        type: 'front',
-        base64: frontBase64
-      });
-      
-      mockups.push({
-        type: 'back',
-        base64: backBase64
-      });
-      
-      return NextResponse.json({ 
-        success: true, 
-        mockups,
-        message: `Mockups generated successfully using ${logoSource} logo. (Base64 mode - Redis not available)`
-      });
+      try {
+        // Store in Redis with 2-minute expiration
+        await redisClient.setEx(`mockup:${frontId}`, 120, frontBuffer.toString('base64')); // 120 seconds = 2 minutes
+        await redisClient.setEx(`mockup:${backId}`, 120, backBuffer.toString('base64')); // 120 seconds = 2 minutes
+        
+        mockups.push({
+          type: 'front',
+          imageUrl: `${baseUrl}/api/mockup/image/${frontId}`
+        });
+        
+        mockups.push({
+          type: 'back',
+          imageUrl: `${baseUrl}/api/mockup/image/${backId}`
+        });
+        
+        return NextResponse.json({ 
+          success: true, 
+          mockups,
+          message: `Mockups generated successfully using ${logoSource} logo. Images will be available for 2 minutes.`
+        });
+      } catch (redisError) {
+        console.error('Redis storage failed, falling back to base64:', redisError);
+        // Fall through to base64 mode
+      }
     }
+    
+    // Fallback to base64
+    mockups.push({
+      type: 'front',
+      base64: frontBase64
+    });
+    
+    mockups.push({
+      type: 'back',
+      base64: backBase64
+    });
+    
+    return NextResponse.json({ 
+      success: true, 
+      mockups,
+      message: `Mockups generated successfully using ${logoSource} logo. (Base64 mode - Redis not available)`
+    });
 
   } catch (error) {
     console.error('Error generating mockup:', error);

@@ -6,10 +6,17 @@ import { ZohoClientKV } from '@/lib/zoho-client-kv';
 import { kv } from '@vercel/kv';
 import { v4 as uuidv4 } from 'uuid';
 
-// Register the Roboto Mono font
-const fontPath = path.join(process.cwd(), 'public', 'RobotoMono.ttf');
-if (fs.existsSync(fontPath)) {
-  registerFont(fontPath, { family: 'Roboto Mono' });
+// Register the Roboto Mono font (optional)
+try {
+  const fontPath = path.join(process.cwd(), 'public', 'RobotoMono.ttf');
+  if (fs.existsSync(fontPath)) {
+    registerFont(fontPath, { family: 'Roboto Mono' });
+    console.log('✅ Font registered successfully');
+  } else {
+    console.log('⚠️ Font file not found, using system font');
+  }
+} catch (error) {
+  console.log('⚠️ Font registration failed, using system font:', error);
 }
 
 // Handle CORS preflight requests
@@ -33,30 +40,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Company and LeadID are required' }, { status: 400 });
     }
 
-    // Create Zoho client and get lead data
-    const zohoClient = new ZohoClientKV();
-    const lead = await zohoClient.getLead(leadID);
-    
-    if (!lead) {
-      return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
-    }
-
-    // Download lead photo
-    let logoBuffer: Buffer;
-    try {
-      logoBuffer = await zohoClient.downloadLeadPhoto(leadID);
-      console.log('✅ [SIMPLE-MOCKUP] Lead photo downloaded, size:', logoBuffer.length, 'bytes');
-    } catch (error) {
-      console.error('Failed to download lead photo:', error);
-      return NextResponse.json({ error: 'Failed to download lead photo' }, { status: 500 });
-    }
-
-    // Load t-shirt templates
+    // Load t-shirt templates first
     const frontTemplatePath = path.join(process.cwd(), 'public', 'whiteshirtfront.jpg');
     const backTemplatePath = path.join(process.cwd(), 'public', 'whitetshirtback.jpg');
     
     if (!fs.existsSync(frontTemplatePath) || !fs.existsSync(backTemplatePath)) {
       return NextResponse.json({ error: 'T-shirt templates not found' }, { status: 500 });
+    }
+
+    // Try to get logo from Zoho, fallback to placeholder
+    let logoBuffer: Buffer;
+    let logoSource = 'placeholder';
+    
+    try {
+      // Create Zoho client and get lead data
+      const zohoClient = new ZohoClientKV();
+      
+      let lead;
+      try {
+        lead = await zohoClient.getLead(leadID);
+        console.log('✅ Lead data retrieved:', lead ? 'Found' : 'Not found');
+      } catch (error) {
+        console.error('❌ Error getting lead:', error);
+        throw new Error('Failed to get lead data');
+      }
+      
+      if (!lead) {
+        throw new Error('Lead not found');
+      }
+
+      // Download lead photo
+      try {
+        logoBuffer = await zohoClient.downloadLeadPhoto(leadID);
+        console.log('✅ [SIMPLE-MOCKUP] Lead photo downloaded, size:', logoBuffer.length, 'bytes');
+        logoSource = 'zoho';
+      } catch (error) {
+        console.error('Failed to download lead photo:', error);
+        throw new Error('Failed to download lead photo');
+      }
+    } catch (error) {
+      console.log('⚠️ Using placeholder logo due to Zoho error:', error);
+      // Use placeholder logo
+      const placeholderResponse = await fetch('https://via.placeholder.com/100x100/FF0000/FFFFFF?text=LOGO');
+      const placeholderArrayBuffer = await placeholderResponse.arrayBuffer();
+      logoBuffer = Buffer.from(placeholderArrayBuffer);
+      logoSource = 'placeholder';
     }
 
     const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
@@ -108,8 +136,12 @@ export async function POST(request: NextRequest) {
     const backY = backTemplate.height * 0.4;
     backCtx.drawImage(logoImage, backX - backLogoWidth/2, backY - backLogoHeight/2, backLogoWidth, backLogoHeight);
 
-    // Add company name underneath
-    backCtx.font = '24px "Roboto Mono", monospace';
+    // Add company name underneath with fallback font
+    try {
+      backCtx.font = '24px "Roboto Mono", monospace';
+    } catch {
+      backCtx.font = '24px Arial, sans-serif';
+    }
     backCtx.fillStyle = '#000000';
     backCtx.textAlign = 'center';
     backCtx.fillText(company, backX, backY + backLogoHeight/2 + 40);
@@ -130,7 +162,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       mockups,
-      message: 'Mockups generated successfully. Images will be available for 2 minutes.'
+      message: `Mockups generated successfully using ${logoSource} logo. Images will be available for 2 minutes.`
     });
 
   } catch (error) {

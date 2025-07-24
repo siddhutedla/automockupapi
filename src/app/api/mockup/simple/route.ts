@@ -51,7 +51,7 @@ export async function OPTIONS() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { company, leadID } = body;
+    const { company, leadID, type = 'front' } = body;
 
     if (!company || !leadID) {
       return NextResponse.json({ error: 'Company and LeadID are required' }, { status: 400 });
@@ -102,76 +102,74 @@ export async function POST(request: NextRequest) {
       logoSource = 'placeholder';
     }
 
-    const mockups = [];
+    let mockupBuffer: Buffer;
+    let filename: string;
 
-    // Generate front mockup
-    const frontTemplate = await loadImage(frontTemplatePath);
-    const frontCanvas = createCanvas(frontTemplate.width, frontTemplate.height);
-    const frontCtx = frontCanvas.getContext('2d');
-    
-    // Draw the base template
-    frontCtx.drawImage(frontTemplate, 0, 0);
-    
-    // Load and draw the logo
-    const logoImage = await loadImage(logoBuffer);
-    
-    // Front logo: right chest, smaller
-    const frontLogoWidth = 60;
-    const frontLogoHeight = 60;
-    const frontX = frontTemplate.width * 0.75; // Right side
-    const frontY = frontTemplate.height * 0.3; // Upper chest area
-    frontCtx.drawImage(logoImage, frontX - frontLogoWidth/2, frontY - frontLogoHeight/2, frontLogoWidth, frontLogoHeight);
-    
-    // Convert front mockup to base64
-    const frontBuffer = frontCanvas.toBuffer('image/png');
-    const frontBase64 = frontBuffer.toString('base64');
-    
-    // Generate back mockup
-    const backTemplate = await loadImage(backTemplatePath);
-    const backCanvas = createCanvas(backTemplate.width, backTemplate.height);
-    const backCtx = backCanvas.getContext('2d');
-    
-    // Draw the base template
-    backCtx.drawImage(backTemplate, 0, 0);
-    
-    // Back logo: centered, smaller
-    const backLogoWidth = 80;
-    const backLogoHeight = 80;
-    const backX = backTemplate.width * 0.5;
-    const backY = backTemplate.height * 0.4;
-    backCtx.drawImage(logoImage, backX - backLogoWidth/2, backY - backLogoHeight/2, backLogoWidth, backLogoHeight);
+    if (type === 'front') {
+      // Generate front mockup
+      const frontTemplate = await loadImage(frontTemplatePath);
+      const frontCanvas = createCanvas(frontTemplate.width, frontTemplate.height);
+      const frontCtx = frontCanvas.getContext('2d');
+      
+      // Draw the base template
+      frontCtx.drawImage(frontTemplate, 0, 0);
+      
+      // Load and draw the logo
+      const logoImage = await loadImage(logoBuffer);
+      
+      // Front logo: right chest, smaller
+      const frontLogoWidth = 60;
+      const frontLogoHeight = 60;
+      const frontX = frontTemplate.width * 0.75; // Right side
+      const frontY = frontTemplate.height * 0.3; // Upper chest area
+      frontCtx.drawImage(logoImage, frontX - frontLogoWidth/2, frontY - frontLogoHeight/2, frontLogoWidth, frontLogoHeight);
+      
+      // Convert front mockup to buffer
+      mockupBuffer = frontCanvas.toBuffer('image/png');
+      filename = `${company.toLowerCase().replace(/\s+/g, '')}-fronttshirt.png`;
+    } else {
+      // Generate back mockup
+      const backTemplate = await loadImage(backTemplatePath);
+      const backCanvas = createCanvas(backTemplate.width, backTemplate.height);
+      const backCtx = backCanvas.getContext('2d');
+      
+      // Draw the base template
+      backCtx.drawImage(backTemplate, 0, 0);
+      
+      // Load and draw the logo
+      const logoImage = await loadImage(logoBuffer);
+      
+      // Back logo: centered, smaller
+      const backLogoWidth = 80;
+      const backLogoHeight = 80;
+      const backX = backTemplate.width * 0.5;
+      const backY = backTemplate.height * 0.4;
+      backCtx.drawImage(logoImage, backX - backLogoWidth/2, backY - backLogoHeight/2, backLogoWidth, backLogoHeight);
 
-    // Add company name underneath with fallback font
-    try {
-      backCtx.font = '24px "Roboto Mono", monospace';
-    } catch {
-      backCtx.font = '24px Arial, sans-serif';
+      // Add company name underneath with fallback font
+      try {
+        backCtx.font = '24px "Roboto Mono", monospace';
+      } catch {
+        backCtx.font = '24px Arial, sans-serif';
+      }
+      backCtx.fillStyle = '#000000';
+      backCtx.textAlign = 'center';
+      backCtx.fillText(company, backX, backY + backLogoHeight/2 + 40);
+      
+      // Convert back mockup to buffer
+      mockupBuffer = backCanvas.toBuffer('image/png');
+      filename = `${company.toLowerCase().replace(/\s+/g, '')}-backtshirt.png`;
     }
-    backCtx.fillStyle = '#000000';
-    backCtx.textAlign = 'center';
-    backCtx.fillText(company, backX, backY + backLogoHeight/2 + 40);
-    
-    // Convert back mockup to base64
-    const backBuffer = backCanvas.toBuffer('image/png');
-    const backBase64 = backBuffer.toString('base64');
 
-    // Return base64 images
-    mockups.push({
-      type: 'front',
-      base64: frontBase64,
-      filename: `${company.toLowerCase().replace(/\s+/g, '')}-fronttshirt.png`
-    });
-    
-    mockups.push({
-      type: 'back',
-      base64: backBase64,
-      filename: `${company.toLowerCase().replace(/\s+/g, '')}-backtshirt.png`
-    });
-    
-    return NextResponse.json({ 
-      success: true, 
-      mockups,
-      message: `Mockups generated successfully using ${logoSource} logo.`
+    // Return binary file for n8n
+    return new NextResponse(mockupBuffer, {
+      headers: {
+        'Content-Type': 'image/png',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'X-Mockup-Type': type,
+        'X-Company-Name': company,
+        'X-Logo-Source': logoSource,
+      },
     });
 
   } catch (error) {

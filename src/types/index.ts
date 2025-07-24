@@ -63,8 +63,8 @@ export interface MockupResponse {
 
 export interface SimpleMockup {
   type: 'front' | 'back';
-  imageUrl?: string;
-  base64?: string;
+  base64: string;
+  filename: string;
 }
 
 export interface SimpleMockupResponse {

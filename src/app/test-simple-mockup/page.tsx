@@ -40,12 +40,7 @@ export default function TestSimpleMockup() {
   };
 
   const getImageSrc = (mockup: SimpleMockup) => {
-    if (mockup.imageUrl) {
-      return mockup.imageUrl; // Redis URL
-    } else if (mockup.base64) {
-      return mockup.base64; // Base64 data URL
-    }
-    return '';
+    return `data:image/png;base64,${mockup.base64}`;
   };
 
   return (
@@ -76,13 +71,11 @@ export default function TestSimpleMockup() {
               <div key={index} className="bg-white p-4 rounded border">
                 <h4 className="font-bold mb-2 capitalize">{mockup.type} Mockup</h4>
                 <p className="text-sm text-gray-600 mb-2">
-                  <strong>Source:</strong> {mockup.imageUrl ? 'Redis URL' : 'Base64'}
+                  <strong>Filename:</strong> {mockup.filename}
                 </p>
-                {mockup.imageUrl && (
-                  <p className="text-xs text-gray-500 mb-2 break-all">
-                    URL: {mockup.imageUrl}
-                  </p>
-                )}
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Base64 Length:</strong> {mockup.base64.length} characters
+                </p>
                 <img 
                   src={getImageSrc(mockup)} 
                   alt={`${mockup.type} mockup`}

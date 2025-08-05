@@ -9,7 +9,7 @@ try {
   const fontPath = path.join(process.cwd(), 'public', 'RobotoMono.ttf');
   if (fs.existsSync(fontPath)) {
     registerFont(fontPath, { family: 'Roboto Mono' });
-    console.log('✅ Font registered successfully');
+    console.log('✅ Font registered successfully - redeploy test');
   } else {
     console.log('⚠️ Font file not found, using system font');
   }
